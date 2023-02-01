@@ -1,6 +1,6 @@
 # Wallpaper configs
 static_wallpaper = False
-online_random_wallpaper = False
+online_random_wallpaper = True
 offline_random_wallpaper = True
 default_wallpaper = 'default.jpg'
 system_resolution = (1920,1080)
@@ -11,7 +11,7 @@ system_resolution = (1920,1080)
 write_gregorian_this_month = True
 write_gregorian_next_month = True
 write_today_big = True
-font_size = 30
+font_size = 20
 default_font = 'Kingthings Trypewriter 2.ttf'
 
 # Gregorian calendar position

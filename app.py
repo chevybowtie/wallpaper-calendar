@@ -52,7 +52,7 @@ def create_wallpaper():
         gtoday = str(today)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
         draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1]),
-                  calendar.month(2023, 1), (255, 255, 255), font=font)
+                  calendar.month(today.year, today.month), (255, 255, 255), font=font)
 
         if config.write_gregorian_next_month:
             nextMonth = next_month_date(today)
