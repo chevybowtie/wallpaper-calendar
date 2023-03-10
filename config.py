@@ -11,8 +11,8 @@ system_resolution = (1920,1080)
 write_gregorian_this_month = True
 write_gregorian_next_month = True
 write_today_big = True
-font_size = 20
-default_font = 'Kingthings Trypewriter 2.ttf'
+font_size = 30
+default_font = 'software-tester-7.regular.ttf'
 
 # Gregorian calendar position
 position_for_calendar = (400, 600)

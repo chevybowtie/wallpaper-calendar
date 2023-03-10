@@ -259,7 +259,7 @@ def validate_config():
         None
     """
     valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)]
-    valid_fonts = ["Kingthings Trypewriter 2.ttf"]  # add more here...
+    valid_fonts = ["Kingthings Trypewriter 2.ttf","simply-mono.book.ttf","software-tester-7.regular.ttf","unispace.bold.otf","code-new-roman.regular.otf"]  # add more here...
 
     if not isinstance(config.system_resolution, tuple) or config.system_resolution not in valid_resolutions:
         raise ValueError(
