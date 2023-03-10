@@ -19,7 +19,7 @@ write_today_big = True
 write_gregorian_calendar_for_this_month = True
 write_gregorian_calendar_for_next_month = True
 position_for_calendar = (400, 600)
-position_for_today_big = (50, 10)
+position_for_today_big = (150, 25)
 
 # Windows Outlook appointments embed
 write_todays_appts = False
