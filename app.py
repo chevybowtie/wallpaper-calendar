@@ -80,8 +80,8 @@ def create_wallpaper():
     """
     # Load font
     fontFile = 'fonts/{}'.format(config.default_font)
-    font = ImageFont.truetype(fontFile, config.font_size)
-    heroFont = ImageFont.truetype(fontFile, config.font_size * 4)
+    font = ImageFont.truetype(fontFile, config.base_font_size)
+    heroFont = ImageFont.truetype(fontFile, config.base_font_size * 4)
 
     today = dt.date.today()
 
@@ -92,7 +92,7 @@ def create_wallpaper():
     draw = ImageDraw.Draw(image)
 
     # Show calendar for this and next month
-    if config.write_gregorian_this_month:
+    if config.write_gregorian_calendar_for_this_month:
         gtoday = str(today)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
         calendar_output = (calendar.month(today.year, today.month))
@@ -110,7 +110,7 @@ def create_wallpaper():
         draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1]),
                   highlighted_day, fill=CALENDAR_COLOR, font=font)
 
-        if config.write_gregorian_next_month:
+        if config.write_gregorian_calendar_for_next_month:
             nextMonth = next_month_date(today)
             draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1] + 300),
                       calendar.month(nextMonth.year, nextMonth.month), fill=CALENDAR_COLOR, font=font)
@@ -124,9 +124,9 @@ def create_wallpaper():
 
     # if enabled, show today's data (large)
     if config.write_today_big:
-        draw.text((config.position_for_today[0], config.position_for_today[1]+100), str(dt.datetime.today().day),
+        draw.text((config.position_for_today_big[0], config.position_for_today_big[1]+100), str(dt.datetime.today().day),
                   CALENDAR_COLOR, font=heroFont)
-        draw.text((config.position_for_today[0], config.position_for_today[1]), calendar.day_name[dt.datetime.today().weekday()],
+        draw.text((config.position_for_today_big[0], config.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
                   CALENDAR_COLOR, font=heroFont)
 
     # create the image
@@ -169,13 +169,13 @@ def get_wallpaper():
     try:
         if config.online_random_wallpaper:
             image_filename = wget.download(
-                'https://picsum.photos/{}/{}'.format(config.system_resolution[0], config.system_resolution[1]), out='wallpapers')
+                'https://picsum.photos/{}/{}'.format(config.image_resolution[0], config.image_resolution[1]), out='wallpapers')
             return image_filename
         elif config.offline_random_wallpaper:
             image_filename = choice(
                 listdir(getcwd()+'\\wallpapers'))
             return 'wallpapers\\'+image_filename
-        elif config.static_wallpaper:
+        else:
             return 'wallpapers/' + config.default_wallpaper
     except:
         return 'wallpapers/default.jpg'
@@ -261,7 +261,7 @@ def validate_config():
     valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)]
     valid_fonts = ["Kingthings Trypewriter 2.ttf","simply-mono.book.ttf","software-tester-7.regular.ttf","unispace.bold.otf","code-new-roman.regular.otf"]  # add more here...
 
-    if not isinstance(config.system_resolution, tuple) or config.system_resolution not in valid_resolutions:
+    if not isinstance(config.image_resolution, tuple) or config.image_resolution not in valid_resolutions:
         raise ValueError(
             "Invalid value for system_resolution in configuration file.")
 
@@ -269,7 +269,7 @@ def validate_config():
         raise ValueError(
             "Invalid value for default_font in configuration file.")
 
-    if not isinstance(config.font_size, int) or config.font_size <= 8:
+    if not isinstance(config.base_font_size, int) or config.base_font_size <= 8:
         raise ValueError("Invalid value for font_size in configuration file.")
 
     if not isinstance(config.position_for_calendar, tuple) or len(config.position_for_calendar) != 2:
@@ -280,15 +280,15 @@ def validate_config():
         raise ValueError(
             "Invalid value for position_for_appts in configuration file.")
 
-    if not isinstance(config.position_for_today, tuple) or len(config.position_for_today) != 2:
+    if not isinstance(config.position_for_today_big, tuple) or len(config.position_for_today_big) != 2:
         raise ValueError(
             "Invalid value for position_for_today in configuration file.")
 
-    if not isinstance(config.write_gregorian_this_month, bool):
+    if not isinstance(config.write_gregorian_calendar_for_this_month, bool):
         raise ValueError(
             "Invalid value for write_gregorian_this_month in configuration file.")
 
-    if not isinstance(config.write_gregorian_next_month, bool):
+    if not isinstance(config.write_gregorian_calendar_for_next_month, bool):
         raise ValueError(
             "Invalid value for write_gregorian_next_month in configuration file.")
 
@@ -307,10 +307,6 @@ def validate_config():
     if not isinstance(config.offline_random_wallpaper, bool):
         raise ValueError(
             "Invalid value for offline_random_wallpaper in configuration file.")
-
-    if not isinstance(config.static_wallpaper, bool):
-        raise ValueError(
-            "Invalid value for static_wallpaper in configuration file.")
 
     if not isinstance(config.default_wallpaper, str):
         raise ValueError(

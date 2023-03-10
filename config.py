@@ -1,23 +1,26 @@
-# Wallpaper configs
-static_wallpaper = False
-online_random_wallpaper = True
-offline_random_wallpaper = True
-default_wallpaper = 'default.jpg'
-system_resolution = (1920,1080)
+# Wallpaper source
 
-## Content
+# pull from https://picsum.photos
+online_random_wallpaper = True
+# use one already downloaded (for offline use)
+offline_random_wallpaper = False
+# this fallback default is used if neither random option is enabled
+default_wallpaper = 'default.jpg'
+image_resolution = (1920,1080)
 
 # text
-write_gregorian_this_month = True
-write_gregorian_next_month = True
-write_today_big = True
-font_size = 30
+base_font_size = 30
 default_font = 'software-tester-7.regular.ttf'
 
-# Gregorian calendar position
-position_for_calendar = (400, 600)
-position_for_today = (50, 10)
+# Hero title of day of week, and today's date
+write_today_big = True
 
-# Windows Outlook integration
+# Gregorian calendar embed
+write_gregorian_calendar_for_this_month = True
+write_gregorian_calendar_for_next_month = True
+position_for_calendar = (400, 600)
+position_for_today_big = (50, 10)
+
+# Windows Outlook appointments embed
 write_todays_appts = False
 position_for_appts = (50, 600)
