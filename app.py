@@ -282,7 +282,7 @@ def validate_config():
 
     if not isinstance(config.position_for_today_big, tuple) or len(config.position_for_today_big) != 2:
         raise ValueError(
-            "Invalid value for position_for_today in configuration file.")
+            "Invalid value for position_for_today_big in configuration file.")
 
     if not isinstance(config.write_gregorian_calendar_for_this_month, bool):
         raise ValueError(
