@@ -9,8 +9,14 @@ default_wallpaper = 'default.jpg'
 image_resolution = (1920, 1080)
 
 # text
-base_font_size = 30
-default_font = 'software-tester-7.regular.ttf'
+base_font_size = 24
+default_font = 'unispace.bold.otf'
+
+# calendar background
+calendar_background_enabled = True
+calendar_background_padding = 30
+calendar_background_corner_radius = 8
+
 
 # Hero title of day of week, and today's date
 write_today_big = True
@@ -18,8 +24,9 @@ write_today_big = True
 # Gregorian calendar embed
 write_gregorian_calendar_for_this_month = True
 write_gregorian_calendar_for_next_month = True
-position_for_calendar = (400, 600)
+position_for_calendar = (350, 600)
 position_for_today_big = (150, 25)
+space_between_calendars = 60
 
 # Windows Outlook appointments embed
 write_todays_appts = False

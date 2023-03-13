@@ -27,7 +27,6 @@ CALENDAR_COLOR = (255, 255, 255)    # Color for the calendar font
 TODAYDATE = dt.date.today()
 STARTOFTODAY = dt.datetime.combine(TODAYDATE, dt.time.min)
 STARTOFTOMORROW = STARTOFTODAY + dt.timedelta(days=1)
-# STARTOFNEXTMONTH = start_of_next_month(TODAYDATE)
 
 
 def execute_set(command):
@@ -103,57 +102,75 @@ def create_wallpaper():
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
         calendar_output = (calendar.month(TODAYDATE.year, TODAYDATE.month))
 
-        text_width, text_height = draw.textsize(
-            (calendar.month(TODAYDATE.year, TODAYDATE.month)), font)
-        corner_radius = 15
-        padding = 15
-
-        # Draw the rounded rectangle with 50% opacity
-        fill_color = (128, 128, 128, 128)  # gray with 50% opacity
-        outline_color = (255,255,255)  # no outline
         calx = image.width-w-settings.position_for_calendar[0]
         caly = image.height-h-settings.position_for_calendar[1]
-        bgx = image.width-w-settings.position_for_calendar[0] - padding
-        bgy = image.height-h-settings.position_for_calendar[1] - padding
 
-        draw.rounded_rectangle((bgx, bgy, calx + text_width + padding ,
-                                caly + text_height + padding ), corner_radius, fill_color, outline_color)
+        text_width, text_height = draw.textsize(
+            (calendar.month(TODAYDATE.year, TODAYDATE.month)), font)
 
+        # do we have calendar backgrounds enabled?
+        if settings.calendar_background_enabled:
 
-
-        # draw it once in today's date color
-        draw.text((image.width-w-settings.position_for_calendar[0], image.height-h-settings.position_for_calendar[1]),
-                  calendar_output, fill=HIGHLIGHT_COLOR, font=font)
-
-        # draw it again in white but skipping today
-        todays_date = " " if TODAYDATE.day < 10 else "  "
-        # finds the first occurrence of today's date and remove it from this output
-        highlighted_day = calendar_output.replace(
-            str(TODAYDATE.day), todays_date, 1)
-
-        draw.text((image.width-w-settings.position_for_calendar[0], image.height-h-settings.position_for_calendar[1]),
-                  highlighted_day, fill=CALENDAR_COLOR, font=font)
-
-        if settings.write_gregorian_calendar_for_next_month:
-            nextMonth = start_of_next_month(TODAYDATE)
-            text_width, text_height = draw.textsize(
-                calendar.month(nextMonth.year, nextMonth.month), font)
-            corner_radius = 15
-            padding = 15
+            corner_radius = settings.calendar_background_corner_radius
+            padding = settings.calendar_background_padding
 
             # Draw the rounded rectangle with 50% opacity
             fill_color = (128, 128, 128, 128)  # gray with 50% opacity
-            outline_color = (255,255,255)  # no outline
-            calx = image.width-w-settings.position_for_calendar[0]
-            caly = image.height-h-settings.position_for_calendar[1]+300
-            bgx = image.width-w-settings.position_for_calendar[0] - padding
-            bgy = image.height-h-settings.position_for_calendar[1]+300 - padding
+            outline_color = (255, 255, 255)  # no outline
+            bgx = calx - padding
+            bgy = caly - padding
 
-            draw.rounded_rectangle((bgx, bgy, calx + text_width + padding ,
-                                    caly + text_height + padding ), corner_radius, fill_color, outline_color)
+            draw.rounded_rectangle((bgx, bgy, calx + text_width + padding,
+                                    caly + text_height + padding), corner_radius, fill_color, outline_color)
+
+        # draw it once in today's date color
+        draw.text((calx, caly),
+                  calendar_output, fill=HIGHLIGHT_COLOR, font=font)
+
+        # draw it again in white but skipping today
+
+        # finds the first occurrence of today's date and remove it from this output
+        todays_date = " " if TODAYDATE.day < 10 else "  "
+        highlighted_day = calendar_output.replace(
+            str(TODAYDATE.day), todays_date, 1)
+
+        draw.text((calx, caly),
+                  highlighted_day, fill=CALENDAR_COLOR, font=font)
+        
+
+        # is next month's calendar enabled?
+        if settings.write_gregorian_calendar_for_next_month:
+
+            # space between calendars
+            offset = text_height + settings.calendar_background_padding + settings.space_between_calendars
+
+            nextMonth = start_of_next_month(TODAYDATE)
+            text_width, text_height = draw.textsize(
+                calendar.month(nextMonth.year, nextMonth.month), font)
+
+            calx = image.width-w-settings.position_for_calendar[0]
+            caly = image.height-h-settings.position_for_calendar[1]+offset
+
+            # do we have calendar backgrounds enabled?
+            if settings.calendar_background_enabled:
+                corner_radius = settings.calendar_background_corner_radius
+                padding = settings.calendar_background_padding
+
+                bgx = image.width-w-settings.position_for_calendar[0] - padding
+                bgy = image.height-h - \
+                    settings.position_for_calendar[1]+offset - padding
+
+                # Draw the rounded rectangle with 50% opacity
+                fill_color = (128, 128, 128, 128)  # gray with 50% opacity
+                outline_color = (255, 255, 255)  # no outline
+
+                draw.rounded_rectangle((bgx, bgy, calx + text_width + padding,
+                    caly + text_height + padding), corner_radius, fill_color, outline_color)
 
             draw.text((calx, caly),
                       calendar.month(nextMonth.year, nextMonth.month), fill=CALENDAR_COLOR, font=font)
+
+
 
     # if enabled, show today's appointments from Outlook on Windows
     if settings.write_todays_appts and platform.system() == 'Windows':
@@ -167,6 +184,8 @@ def create_wallpaper():
             draw.text((settings.position_for_appts[0]+200, settings.position_for_appts[1]+(
                 outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
             outputRow += 1
+
+
 
     # if enabled, show today's data (large)
     if settings.write_today_big:
@@ -289,7 +308,6 @@ def groom_appointments(calendar):
     for subject in appointmentDictionary.keys():
         rowDict = {}
         rowDict["Subject"] = appointmentDictionary[subject]["Subject"] if appointmentDictionary[subject]["Subject"] else ""
-
 
 
 def start():
