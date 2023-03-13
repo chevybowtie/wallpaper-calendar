@@ -6,7 +6,7 @@ online_random_wallpaper = True
 offline_random_wallpaper = False
 # this fallback default is used if neither random option is enabled
 default_wallpaper = 'default.jpg'
-image_resolution = (1920,1080)
+image_resolution = (1920, 1080)
 
 # text
 base_font_size = 30
@@ -26,7 +26,6 @@ write_todays_appts = False
 position_for_appts = (50, 600)
 
 
-
 def validate_config():
     """
     Validates the configuration file to ensure that it contains valid values.
@@ -38,7 +37,8 @@ def validate_config():
         None
     """
     valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)]
-    valid_fonts = ["Kingthings Trypewriter 2.ttf","simply-mono.book.ttf","software-tester-7.regular.ttf","unispace.bold.otf","code-new-roman.regular.otf"]  # add more here...
+    valid_fonts = ["Kingthings Trypewriter 2.ttf", "simply-mono.book.ttf", "software-tester-7.regular.ttf",
+                   "unispace.bold.otf", "code-new-roman.regular.otf"]  # add more here...
 
     if not isinstance(image_resolution, tuple) or image_resolution not in valid_resolutions:
         raise ValueError(
@@ -90,4 +90,3 @@ def validate_config():
     if not isinstance(default_wallpaper, str):
         raise ValueError(
             "Invalid value for default_wallpaper in configuration file.")
-

@@ -4,11 +4,12 @@ from os import getcwd, listdir, path
 import platform
 from random import choice
 import calendar
-import win32com.client
 import subprocess
 import wget
 from PIL import Image, ImageDraw, ImageFont
-import config
+import config as settings
+if platform.system() == 'Windows':
+    import win32com.client
 
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
@@ -21,6 +22,12 @@ SPIF_SENDWININICHANGE = 0x2
 # these should move to config.py
 HIGHLIGHT_COLOR = (0, 255, 0)       # Today's date font color for highlighting
 CALENDAR_COLOR = (255, 255, 255)    # Color for the calendar font
+
+# date helpers
+TODAYDATE = dt.date.today()
+STARTOFTODAY = dt.datetime.combine(TODAYDATE, dt.time.min)
+STARTOFTOMORROW = STARTOFTODAY + dt.timedelta(days=1)
+# STARTOFNEXTMONTH = start_of_next_month(TODAYDATE)
 
 
 def execute_set(command):
@@ -79,11 +86,10 @@ def create_wallpaper():
         None
     """
     # Load font
-    fontFile = 'fonts/{}'.format(config.default_font)
-    font = ImageFont.truetype(fontFile, config.base_font_size)
-    heroFont = ImageFont.truetype(fontFile, config.base_font_size * 4)
-
-    today = dt.date.today()
+    fontFile = 'fonts/{}'.format(settings.default_font)
+    font = ImageFont.truetype(fontFile, settings.base_font_size)
+    heroFont = ImageFont.truetype(fontFile, settings.base_font_size * 4)
+    apptFont = ImageFont.truetype(fontFile, settings.base_font_size * 2)
 
     # Load Image
     wallpaper_name = get_wallpaper()
@@ -92,41 +98,81 @@ def create_wallpaper():
     draw = ImageDraw.Draw(image)
 
     # Show calendar for this and next month
-    if config.write_gregorian_calendar_for_this_month:
-        gtoday = str(today)
+    if settings.write_gregorian_calendar_for_this_month:
+        gtoday = str(TODAYDATE)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
-        calendar_output = (calendar.month(today.year, today.month))
+        calendar_output = (calendar.month(TODAYDATE.year, TODAYDATE.month))
+
+        text_width, text_height = draw.textsize(
+            (calendar.month(TODAYDATE.year, TODAYDATE.month)), font)
+        corner_radius = 15
+        padding = 15
+
+        # Draw the rounded rectangle with 50% opacity
+        fill_color = (128, 128, 128, 128)  # gray with 50% opacity
+        outline_color = (255,255,255)  # no outline
+        calx = image.width-w-settings.position_for_calendar[0]
+        caly = image.height-h-settings.position_for_calendar[1]
+        bgx = image.width-w-settings.position_for_calendar[0] - padding
+        bgy = image.height-h-settings.position_for_calendar[1] - padding
+
+        draw.rounded_rectangle((bgx, bgy, calx + text_width + padding ,
+                                caly + text_height + padding ), corner_radius, fill_color, outline_color)
+
+
 
         # draw it once in today's date color
-        draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1]),
+        draw.text((image.width-w-settings.position_for_calendar[0], image.height-h-settings.position_for_calendar[1]),
                   calendar_output, fill=HIGHLIGHT_COLOR, font=font)
 
         # draw it again in white but skipping today
-        todays_date = " " if today.day < 10 else "  "
+        todays_date = " " if TODAYDATE.day < 10 else "  "
         # finds the first occurrence of today's date and remove it from this output
         highlighted_day = calendar_output.replace(
-            str(today.day), todays_date, 1)
+            str(TODAYDATE.day), todays_date, 1)
 
-        draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1]),
+        draw.text((image.width-w-settings.position_for_calendar[0], image.height-h-settings.position_for_calendar[1]),
                   highlighted_day, fill=CALENDAR_COLOR, font=font)
 
-        if config.write_gregorian_calendar_for_next_month:
-            nextMonth = next_month_date(today)
-            draw.text((image.width-w-config.position_for_calendar[0], image.height-h-config.position_for_calendar[1] + 300),
+        if settings.write_gregorian_calendar_for_next_month:
+            nextMonth = start_of_next_month(TODAYDATE)
+            text_width, text_height = draw.textsize(
+                calendar.month(nextMonth.year, nextMonth.month), font)
+            corner_radius = 15
+            padding = 15
+
+            # Draw the rounded rectangle with 50% opacity
+            fill_color = (128, 128, 128, 128)  # gray with 50% opacity
+            outline_color = (255,255,255)  # no outline
+            calx = image.width-w-settings.position_for_calendar[0]
+            caly = image.height-h-settings.position_for_calendar[1]+300
+            bgx = image.width-w-settings.position_for_calendar[0] - padding
+            bgy = image.height-h-settings.position_for_calendar[1]+300 - padding
+
+            draw.rounded_rectangle((bgx, bgy, calx + text_width + padding ,
+                                    caly + text_height + padding ), corner_radius, fill_color, outline_color)
+
+            draw.text((calx, caly),
                       calendar.month(nextMonth.year, nextMonth.month), fill=CALENDAR_COLOR, font=font)
 
-    # if enabled, show today's appointments from Outlook
-    if config.write_todays_appts:
+    # if enabled, show today's appointments from Outlook on Windows
+    if settings.write_todays_appts and platform.system() == 'Windows':
         appts = get_outlook_appointments(
-            dt.datetime(2023, 1, 31), dt.datetime(2023, 2, 1))
-        draw.text((config.position_for_appts[0], config.position_for_appts[1]),
-                  appts, CALENDAR_COLOR, font=font)
+            STARTOFTODAY, STARTOFTOMORROW)
+        outputRow = 0
+        for appointment in appts:
+            start_time = appointment.Start.strftime("%H:%M")
+            draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+                outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
+            draw.text((settings.position_for_appts[0]+200, settings.position_for_appts[1]+(
+                outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
+            outputRow += 1
 
     # if enabled, show today's data (large)
-    if config.write_today_big:
-        draw.text((config.position_for_today_big[0], config.position_for_today_big[1]+100), str(dt.datetime.today().day),
+    if settings.write_today_big:
+        draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+100), str(dt.datetime.today().day),
                   CALENDAR_COLOR, font=heroFont)
-        draw.text((config.position_for_today_big[0], config.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
+        draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
                   CALENDAR_COLOR, font=heroFont)
 
     # create the image
@@ -136,7 +182,7 @@ def create_wallpaper():
     image.save("output.jpg")
 
 
-def next_month_date(current_date):
+def start_of_next_month(date):
     """
     Returns a `datetime.date` object representing the first day of the next month after the specified date.
 
@@ -146,13 +192,11 @@ def next_month_date(current_date):
     Returns:
         datetime.date: A `datetime.date` object representing the first day of the next month.
     """
-    year = current_date.year+(current_date.month//12)
-    month = 1 if (current_date.month//12) else current_date.month + 1
-    next_month_len = calendar.monthrange(year, month)[1]
-    next_month = current_date
-    if current_date.day > next_month_len:
-        next_month = next_month.replace(day=next_month_len)
-    next_month = next_month.replace(year=year, month=month)
+    year = date.year + (date.month // 12)
+    month = date.month % 12 + 1
+    next_month = dt.date(year, month, 1)
+
+    # Return the start of the next month
     return next_month
 
 
@@ -167,16 +211,16 @@ def get_wallpaper():
         str: The filename of the wallpaper image to use.
     """
     try:
-        if config.online_random_wallpaper:
+        if settings.online_random_wallpaper:
             image_filename = wget.download(
-                'https://picsum.photos/{}/{}'.format(config.image_resolution[0], config.image_resolution[1]), out='wallpapers')
+                'https://picsum.photos/{}/{}'.format(settings.image_resolution[0], settings.image_resolution[1]), out='wallpapers')
             return image_filename
-        elif config.offline_random_wallpaper:
+        elif settings.offline_random_wallpaper:
             image_filename = choice(
                 listdir(getcwd()+'\\wallpapers'))
             return 'wallpapers\\'+image_filename
         else:
-            return 'wallpapers/' + config.default_wallpaper
+            return 'wallpapers/' + settings.default_wallpaper
     except:
         return 'wallpapers/default.jpg'
 
@@ -212,6 +256,12 @@ def get_outlook_appointments(begin, end):
         '%m/%d/%Y') + "' AND [END] <= '" + end.strftime('%m/%d/%Y') + "'"
     calendar = calendar.Restrict(restriction)
 
+    # show what we found in Outlook
+    for appointment in calendar:
+        print("Subject: ", appointment.Subject)
+        print("Start: ", appointment.Start)
+        print("---------")
+
     return calendar
 
 
@@ -239,83 +289,12 @@ def groom_appointments(calendar):
     for subject in appointmentDictionary.keys():
         rowDict = {}
         rowDict["Subject"] = appointmentDictionary[subject]["Subject"] if appointmentDictionary[subject]["Subject"] else ""
-        ApptRow(rowDict)
 
-# each appointment row should be output to the wallpaper
-
-
-def ApptRow(rowDictionary):
-    print(rowDictionary)
-
-
-def validate_config():
-    """
-    Validates the configuration file to ensure that it contains valid values.
-
-    Args:
-        None
-
-    Returns:
-        None
-    """
-    valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)]
-    valid_fonts = ["Kingthings Trypewriter 2.ttf","simply-mono.book.ttf","software-tester-7.regular.ttf","unispace.bold.otf","code-new-roman.regular.otf"]  # add more here...
-
-    if not isinstance(config.image_resolution, tuple) or config.image_resolution not in valid_resolutions:
-        raise ValueError(
-            "Invalid value for system_resolution in configuration file.")
-
-    if not isinstance(config.default_font, str) or config.default_font not in valid_fonts:
-        raise ValueError(
-            "Invalid value for default_font in configuration file.")
-
-    if not isinstance(config.base_font_size, int) or config.base_font_size <= 8:
-        raise ValueError("Invalid value for font_size in configuration file.")
-
-    if not isinstance(config.position_for_calendar, tuple) or len(config.position_for_calendar) != 2:
-        raise ValueError(
-            "Invalid value for position_for_calendar in configuration file.")
-
-    if not isinstance(config.position_for_appts, tuple) or len(config.position_for_appts) != 2:
-        raise ValueError(
-            "Invalid value for position_for_appts in configuration file.")
-
-    if not isinstance(config.position_for_today_big, tuple) or len(config.position_for_today_big) != 2:
-        raise ValueError(
-            "Invalid value for position_for_today_big in configuration file.")
-
-    if not isinstance(config.write_gregorian_calendar_for_this_month, bool):
-        raise ValueError(
-            "Invalid value for write_gregorian_this_month in configuration file.")
-
-    if not isinstance(config.write_gregorian_calendar_for_next_month, bool):
-        raise ValueError(
-            "Invalid value for write_gregorian_next_month in configuration file.")
-
-    if not isinstance(config.write_todays_appts, bool):
-        raise ValueError(
-            "Invalid value for write_todays_appts in configuration file.")
-
-    if not isinstance(config.write_today_big, bool):
-        raise ValueError(
-            "Invalid value for write_today_big in configuration file.")
-
-    if not isinstance(config.online_random_wallpaper, bool):
-        raise ValueError(
-            "Invalid value for online_random_wallpaper in configuration file.")
-
-    if not isinstance(config.offline_random_wallpaper, bool):
-        raise ValueError(
-            "Invalid value for offline_random_wallpaper in configuration file.")
-
-    if not isinstance(config.default_wallpaper, str):
-        raise ValueError(
-            "Invalid value for default_wallpaper in configuration file.")
 
 
 def start():
     try:
-        validate_config()
+        settings.validate_config()
     except ValueError as e:
         print(f"Invalid configuration file: {e}")
         return
