@@ -13,7 +13,7 @@ base_font_size = 24
 default_font = 'unispace.bold.otf'
 
 # calendar background
-calendar_background_enabled = True
+calendar_background_enabled = False
 calendar_background_padding = 30
 calendar_background_corner_radius = 8
 
@@ -28,7 +28,8 @@ position_for_calendar = (350, 600)
 position_for_today_big = (150, 25)
 space_between_calendars = 60
 
-# Windows Outlook appointments embed
+# appointments embed
+calendar_access = 'Outlook client '
 write_todays_appts = False
 position_for_appts = (50, 600)
 

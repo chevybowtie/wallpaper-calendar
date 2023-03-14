@@ -105,8 +105,8 @@ def create_wallpaper():
         calx = image.width-w-settings.position_for_calendar[0]
         caly = image.height-h-settings.position_for_calendar[1]
 
-        text_width, text_height = draw.textsize(
-            (calendar.month(TODAYDATE.year, TODAYDATE.month)), font)
+        calendar_text = calendar.month(TODAYDATE.year, TODAYDATE.month)
+        _, _, text_width, text_height = draw.textbbox( (0,0), calendar_text, font)
 
         # do we have calendar backgrounds enabled?
         if settings.calendar_background_enabled:
@@ -145,8 +145,9 @@ def create_wallpaper():
             offset = text_height + settings.calendar_background_padding + settings.space_between_calendars
 
             nextMonth = start_of_next_month(TODAYDATE)
-            text_width, text_height = draw.textsize(
-                calendar.month(nextMonth.year, nextMonth.month), font)
+            calendar_text = calendar.month(nextMonth.year, nextMonth.month)
+            _, _, text_width, text_height = draw.textbbox( (0,0), calendar_text, font)
+
 
             calx = image.width-w-settings.position_for_calendar[0]
             caly = image.height-h-settings.position_for_calendar[1]+offset
