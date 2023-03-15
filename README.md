@@ -27,7 +27,7 @@ This feature branch adds an experimental feature that allows you to automaticall
 ```
 $ pip install pywin32
 ```
-Then, you can run the wallpaper-calendar-outlook.py script to generate and set your wallpaper calendar with today's appointments:
+Then, you can run the wallpaper-calendar.py script to generate and set your wallpaper calendar with today's appointments:
 
 ```
 $ python wallpaper-calendar.py --outlook=true
