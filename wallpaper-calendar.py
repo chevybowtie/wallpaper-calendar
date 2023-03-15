@@ -8,6 +8,7 @@ import subprocess
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
+import argparse
 if platform.system() == 'Windows':
     import win32com.client
 
@@ -27,6 +28,29 @@ CALENDAR_COLOR = settings.calendar_base_color           # Color for the calendar
 TODAYDATE = dt.date.today()
 STARTOFTODAY = dt.datetime.combine(TODAYDATE, dt.time.min)
 STARTOFTOMORROW = STARTOFTODAY + dt.timedelta(days=1)
+
+CALENDARDATE = dt.date.today()
+
+# Initialize the ArgumentParser
+parser = argparse.ArgumentParser()
+
+# Add the arguments that you want to override
+parser.add_argument('--date', type=str, help='provide date to generate calendar month')
+parser.add_argument('--outlook', type=bool, help='when set to true, populate using Outlook integration')
+# Parse the command-line arguments
+args = parser.parse_args()
+# Override the values in config.py with the command-line arguments
+if args.date:
+    date_format = "%m/%d/%Y"
+    CALENDARDATE = dt.datetime.strptime(args.date, date_format)
+# if we have a custom calendar, calendardate will not match todaydate
+CUSTOMCALENDAR = (CALENDARDATE != TODAYDATE)
+if CUSTOMCALENDAR:
+    TODAYDATE = CALENDARDATE
+
+if args.outlook:
+    settings.write_todays_appts = True
+
 
 
 def execute_set(command):
@@ -121,22 +145,23 @@ def create_wallpaper():
             mask_draw.rounded_rectangle((bgx, bgy, bgx + text_width + (
                 padding * 2), bgy + text_height + (padding * 2)), corner_radius, fill=(128, 128, 128, 64))
             image = Image.alpha_composite(image, mask)
-
-        # draw it once in today's date color
-        this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
-        mask_draw = ImageDraw.Draw(this_month_mask)
-        mask_draw.text((calx, caly), calendar_text,
-                       fill=HIGHLIGHT_COLOR, font=font)
-        image = Image.alpha_composite(image, this_month_mask)
+        if not CUSTOMCALENDAR:
+            # draw it once in today's date color
+            this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            mask_draw = ImageDraw.Draw(this_month_mask)
+            mask_draw.text((calx, caly), calendar_text,
+                        fill=HIGHLIGHT_COLOR, font=font)
+            image = Image.alpha_composite(image, this_month_mask)
 
         # draw it again in white but skipping today
         # finds the first occurrence of today's date and remove it from this output
-        todays_date = " " if TODAYDATE.day < 10 else "  "
-        highlighted_day = calendar_text.replace(
-            str(TODAYDATE.day), todays_date, 1)
+        if not CUSTOMCALENDAR:
+            todays_date = " " if TODAYDATE.day < 10 else "  "
+            calendar_text = calendar_text.replace(
+                str(TODAYDATE.day), todays_date, 1)
         this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(this_month_mask)
-        mask_draw.text((calx, caly), highlighted_day,
+        mask_draw.text((calx, caly), calendar_text,
                        fill=CALENDAR_COLOR, font=font)
         image = Image.alpha_composite(image, this_month_mask)
         corner_radius = settings.calendar_background_corner_radius
@@ -197,8 +222,8 @@ def create_wallpaper():
             outputRow += 1
         image = Image.alpha_composite(image, appointment_mask)
 
-    # if enabled, show today's data (large)
-    if settings.write_today_big:
+    # if enabled, show today's data (large) if this is not a custom calendar
+    if settings.write_today_big and not CUSTOMCALENDAR:
         today_big_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(today_big_mask)
         if settings.today_big_shadow:
