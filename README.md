@@ -1,5 +1,5 @@
 # Wallpaper Calendar
-Wallpaper Calendar is a simple command-line utility that allows you to generate a calendar as your desktop wallpaper. It supports different styles and layouts, and can be customized to fit your preferences.
+Wallpaper Calendar is a simple command-line utility that allows you to generate a calendar as your desktop wallpaper. It supports different styles and layouts, and can be customized to fit your preferences. By default, it use a new random image. run it multiple times to generate different wallpapers.
 
 ## Installation
 To install Wallpaper Calendar, you need to have Python 3.x installed on your system. Then, you can clone this repository and install the dependencies:
