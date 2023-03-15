@@ -14,8 +14,8 @@ Once you have installed the dependencies, you can run the wallpaper-calendar.py 
 ```
 $ python wallpaper-calendar.py
 ```
-
-You can customize the output by specifying different options. For example, to generate a calendar for a date in the future, specify the date
+## Customization 
+Many options exist in `config.py` but you may also perfirm one-off customizations by specifying different options. For example, to generate a calendar for a date in the future, specify the date
 ```
 $ python wallpaper-calendar.py --date=9/15/2023
 ```
