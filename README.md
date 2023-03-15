@@ -1,10 +1,35 @@
-When you want to replicate this environment in another system, you can run pip install, using the -r switch to specify the requirements file and pip will install the dependencies for you:
+# Wallpaper Calendar
+Wallpaper Calendar is a simple command-line utility that allows you to generate a calendar as your desktop wallpaper. It supports different styles and layouts, and can be customized to fit your preferences.
 
-`python -m pip install -r requirements.txt`
+## Installation
+To install Wallpaper Calendar, you need to have Python 3.x installed on your system. Then, you can clone this repository and install the dependencies:
 
-Upgrade in the future:
+```
+$ git clone https://github.com/chevybowtie/wallpaper-calendar.git
+$ cd wallpaper-calendar
+$ pip install -r requirements.txt
+```
+Once you have installed the dependencies, you can run the wallpaper-calendar.py script to generate your wallpaper calendar. By default, it will generate a calendar for the current month and year, using the "classic" style.
 
-`python -m pip install -U -r requirements.txt`
+```
+$ python wallpaper-calendar.py
+```
 
-# Notice on Outlook integration
-While this has some code to get Outlook's appointments and prepare to inject in the wallpaper, I don't use Outlook at home and I keep forgetting to set this up at work to try it. So, this feature is incomplete at best (and just outputs to console) and dangerous at worst (it *shouldn't* bork your calendar)
+You can customize the output by specifying different options. For example, to generate a calendar for a date in the future, specify the date
+```
+$ python wallpaper-calendar.py --date=9/15/2023
+```
+This will generate a new wallpaper image with only the calendar overlaid on it.
+
+
+## Outlook Integration
+This feature branch adds an experimental feature that allows you to automatically generate and set your wallpaper calendar by including your Outlook appointments for the day. To use this feature, you need to have Outlook installed on your system, and you need to have pywin32 installed:
+```
+$ pip install pywin32
+```
+Then, you can run the wallpaper-calendar-outlook.py script to generate and set your wallpaper calendar with today's appointments:
+
+```
+$ python wallpaper-calendar.py --outlook=true
+```
+This will generate a calendar, while also embedding today's schedule based on Outlook's calendar. Note that this feature is still experimental and may not work on all systems or with all versions of Outlook.
