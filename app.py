@@ -20,8 +20,8 @@ SPIF_UPDATEINIFILE = 0x1
 SPIF_SENDWININICHANGE = 0x2
 
 # these should move to config.py
-HIGHLIGHT_COLOR = (0, 255, 0)       # Today's date font color for highlighting
-CALENDAR_COLOR = (255, 255, 255)    # Color for the calendar font
+HIGHLIGHT_COLOR = settings.today_highlight_color        # Today's date font color for highlighting
+CALENDAR_COLOR = settings.calendar_base_color           # Color for the calendar font
 
 # date helpers
 TODAYDATE = dt.date.today()
@@ -93,113 +93,136 @@ def create_wallpaper():
     # Load Image
     wallpaper_name = get_wallpaper()
     print(wallpaper_name)
-    image = Image.open(wallpaper_name)
+    image = Image.open(wallpaper_name).convert('RGBA')
+    # image_rgba = image.convert('RGBA')
     draw = ImageDraw.Draw(image)
 
     # Show calendar for this and next month
     if settings.write_gregorian_calendar_for_this_month:
+
         gtoday = str(TODAYDATE)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
-        calendar_output = (calendar.month(TODAYDATE.year, TODAYDATE.month))
 
+        calendar_text = (calendar.month(TODAYDATE.year, TODAYDATE.month))
         calx = image.width-w-settings.position_for_calendar[0]
         caly = image.height-h-settings.position_for_calendar[1]
-
-        calendar_text = calendar.month(TODAYDATE.year, TODAYDATE.month)
-        _, _, text_width, text_height = draw.textbbox( (0,0), calendar_text, font)
+        _, _, text_width, text_height = draw.textbbox(
+            (0, 0), calendar_text, font)
+        corner_radius = settings.calendar_background_corner_radius
+        padding = settings.calendar_background_padding
 
         # do we have calendar backgrounds enabled?
         if settings.calendar_background_enabled:
-
-            corner_radius = settings.calendar_background_corner_radius
-            padding = settings.calendar_background_padding
-
-            # Draw the rounded rectangle with 50% opacity
-            fill_color = (128, 128, 128, 128)  # gray with 50% opacity
-            outline_color = (255, 255, 255)  # no outline
             bgx = calx - padding
             bgy = caly - padding
-
-            draw.rounded_rectangle((bgx, bgy, calx + text_width + padding,
-                                    caly + text_height + padding), corner_radius, fill_color, outline_color)
+            mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            mask_draw = ImageDraw.Draw(mask)
+            # Draw the calendar background with 25% opacity (64)
+            mask_draw.rounded_rectangle((bgx, bgy, bgx + text_width + (
+                padding * 2), bgy + text_height + (padding * 2)), corner_radius, fill=(128, 128, 128, 64))
+            image = Image.alpha_composite(image, mask)
 
         # draw it once in today's date color
-        draw.text((calx, caly),
-                  calendar_output, fill=HIGHLIGHT_COLOR, font=font)
+        this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        mask_draw = ImageDraw.Draw(this_month_mask)
+        mask_draw.text((calx, caly), calendar_text,
+                       fill=HIGHLIGHT_COLOR, font=font)
+        image = Image.alpha_composite(image, this_month_mask)
 
         # draw it again in white but skipping today
-
         # finds the first occurrence of today's date and remove it from this output
         todays_date = " " if TODAYDATE.day < 10 else "  "
-        highlighted_day = calendar_output.replace(
+        highlighted_day = calendar_text.replace(
             str(TODAYDATE.day), todays_date, 1)
-
-        draw.text((calx, caly),
-                  highlighted_day, fill=CALENDAR_COLOR, font=font)
-        
+        this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        mask_draw = ImageDraw.Draw(this_month_mask)
+        mask_draw.text((calx, caly), highlighted_day,
+                       fill=CALENDAR_COLOR, font=font)
+        image = Image.alpha_composite(image, this_month_mask)
+        corner_radius = settings.calendar_background_corner_radius
+        padding = settings.calendar_background_padding
 
         # is next month's calendar enabled?
         if settings.write_gregorian_calendar_for_next_month:
 
             # space between calendars
-            offset = text_height + settings.calendar_background_padding + settings.space_between_calendars
+            offset = text_height + settings.calendar_background_padding + \
+                settings.space_between_calendars
 
             nextMonth = start_of_next_month(TODAYDATE)
             calendar_text = calendar.month(nextMonth.year, nextMonth.month)
-            _, _, text_width, text_height = draw.textbbox( (0,0), calendar_text, font)
-
+            _, _, text_width, text_height = draw.textbbox(
+                (0, 0), calendar_text, font)
 
             calx = image.width-w-settings.position_for_calendar[0]
             caly = image.height-h-settings.position_for_calendar[1]+offset
 
             # do we have calendar backgrounds enabled?
             if settings.calendar_background_enabled:
-                corner_radius = settings.calendar_background_corner_radius
-                padding = settings.calendar_background_padding
 
                 bgx = image.width-w-settings.position_for_calendar[0] - padding
                 bgy = image.height-h - \
                     settings.position_for_calendar[1]+offset - padding
 
-                # Draw the rounded rectangle with 50% opacity
-                fill_color = (128, 128, 128, 128)  # gray with 50% opacity
-                outline_color = (255, 255, 255)  # no outline
+                # Draw the calendar box with 50% opacity
+                mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+                mask_draw = ImageDraw.Draw(mask)
 
-                draw.rounded_rectangle((bgx, bgy, calx + text_width + padding,
-                    caly + text_height + padding), corner_radius, fill_color, outline_color)
+                # Draw the calendar background with 25% opacity (64)
+                mask_draw.rounded_rectangle((bgx, bgy, bgx + text_width + (
+                    padding * 2), bgy + text_height + (padding * 2)), corner_radius, fill=(128, 128, 128, 64))
+                image = Image.alpha_composite(image, mask)
 
-            draw.text((calx, caly),
-                      calendar.month(nextMonth.year, nextMonth.month), fill=CALENDAR_COLOR, font=font)
+            next_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            mask_draw = ImageDraw.Draw(next_month_mask)
 
-
+            mask_draw.text((calx, caly), calendar.month(
+                nextMonth.year, nextMonth.month), fill=CALENDAR_COLOR, font=font)
+            image = Image.alpha_composite(image, next_month_mask)
 
     # if enabled, show today's appointments from Outlook on Windows
     if settings.write_todays_appts and platform.system() == 'Windows':
         appts = get_outlook_appointments(
             STARTOFTODAY, STARTOFTOMORROW)
         outputRow = 0
+        appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        mask_draw = ImageDraw.Draw(appointment_mask)
+
         for appointment in appts:
             start_time = appointment.Start.strftime("%H:%M")
-            draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+            mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                 outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
-            draw.text((settings.position_for_appts[0]+200, settings.position_for_appts[1]+(
+            mask_draw.text((settings.position_for_appts[0]+200, settings.position_for_appts[1]+(
                 outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
             outputRow += 1
-
-
+        image = Image.alpha_composite(image, appointment_mask)
 
     # if enabled, show today's data (large)
     if settings.write_today_big:
-        draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+100), str(dt.datetime.today().day),
-                  CALENDAR_COLOR, font=heroFont)
-        draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
-                  CALENDAR_COLOR, font=heroFont)
+        today_big_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        mask_draw = ImageDraw.Draw(today_big_mask)
+        if settings.today_big_shadow:
+            mask_draw.text((settings.position_for_today_big[0] + settings.today_big_shadow_offset, settings.position_for_today_big[1] + 100 + settings.today_big_shadow_offset), str(dt.datetime.today().day),
+                           settings.today_big_shadow_color, font=heroFont)
+
+        mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+100), str(dt.datetime.today().day),
+                       CALENDAR_COLOR, font=heroFont)
+
+        if settings.today_big_shadow:
+            mask_draw.text((settings.position_for_today_big[0] + settings.today_big_shadow_offset, settings.position_for_today_big[1] + settings.today_big_shadow_offset), calendar.day_name[dt.datetime.today().weekday()],
+                           settings.today_big_shadow_color, font=heroFont)
+
+        mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
+                       CALENDAR_COLOR, font=heroFont)
+
+        image = Image.alpha_composite(image, today_big_mask)
 
     # create the image
     draw = ImageDraw.Draw(image)
 
     # output to disk
-    image.save("output.jpg")
+    image = image.convert('RGB')
+    image.save("output.jpg", 'JPEG', quality=90)
 
 
 def start_of_next_month(date):
