@@ -11,6 +11,8 @@ import config as settings
 import argparse
 if platform.system() == 'Windows':
     import win32com.client
+else:
+    import helpers.kdesetwallpaper2 as helper
 
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
@@ -92,8 +94,9 @@ def set_wallpaper(wallpaper_name='\output.jpg'):
         # else:
         #     print('Wallpaper set successfully')
     elif platform.system() == 'Linux':
-        execute_set(
-            f"{cwd}/helpers/kdesetwallpaper {wallpaper_path}")
+        helper.setwallpaper(wallpaper_path, plugin='org.kde.image')
+        # execute_set(
+        #     f"{cwd}/helpers/kdesetwallpaper {wallpaper_path}")
 #        execute_set(
 #            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
     else:
