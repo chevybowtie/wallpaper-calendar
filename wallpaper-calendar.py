@@ -93,7 +93,9 @@ def set_wallpaper(wallpaper_name='\output.jpg'):
         #     print('Wallpaper set successfully')
     elif platform.system() == 'Linux':
         execute_set(
-            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
+            f"{cwd}/helpers/kdesetwallpaper {wallpaper_path}")
+#        execute_set(
+#            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
     else:
         input('Your operating system is not supported')
 

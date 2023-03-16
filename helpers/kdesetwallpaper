@@ -1,0 +1,17 @@
+#!/bin/bash
+
+export DISPLAY=:0
+export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+
+qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.evaluateScript "
+	var allDesktops = desktops();
+	/* print (allDesktops); */
+	for (i=0;i<allDesktops.length;i++) {
+		/* print ('setting desktop ' + i); */
+		desktop = allDesktops[i];
+		desktop.wallpaperPlugin = \"org.kde.image\";
+		desktop.currentConfigGroup = Array(\"Wallpaper\", \"org.kde.image\", \"General\");
+		desktop.writeConfig(\"Image\", \"file://${1}\")
+	}
+"
+
