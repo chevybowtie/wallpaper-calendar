@@ -20,23 +20,25 @@ calendar_background_corner_radius = 8
 # Hero title of day of week, and today's date
 write_today_big = True
 today_big_shadow = True
-today_big_shadow_color = (204,204,204)
+today_big_shadow_color = (204, 204, 204)
 today_big_shadow_offset = 3
 
 # Gregorian calendar embed
 write_gregorian_calendar_for_this_month = True
 write_gregorian_calendar_for_next_month = True
 position_for_calendar = (350, 600)
-position_for_today_big = (150, 25)
+position_for_today_big = (200, 25)
 space_between_calendars = 60
-today_highlight_color = (0, 255, 0)     # Today's date font color for highlighting
+# Today's date font color for highlighting
+today_highlight_color = (0, 255, 0)
 calendar_base_color = (255, 255, 255)    # Color for the calendar font
 
 
 # appointments embed
 # calendar_access = 'Outlook client'
 write_todays_appts = False
-position_for_appts = (50, 600)
+position_for_appts = (200, 300)
+range_in_days = 6
 
 
 def validate_config():
@@ -54,18 +56,22 @@ def validate_config():
                    "unispace.bold.otf", "code-new-roman.regular.otf"]  # add more here...
 
     if not isinstance(today_highlight_color, tuple) or len(today_highlight_color) != 3:
-        raise ValueError("Invalid value for today_highlight_color in configuration file.")
+        raise ValueError(
+            "Invalid value for today_highlight_color in configuration file.")
 
     for value in today_highlight_color:
         if not isinstance(value, int) or value < 0 or value > 255:
-            raise ValueError("Invalid value for today_highlight_color in configuration file.")
+            raise ValueError(
+                "Invalid value for today_highlight_color in configuration file.")
 
     if not isinstance(calendar_base_color, tuple) or len(calendar_base_color) != 3:
-        raise ValueError("Invalid value for calendar_base_color in configuration file.")
+        raise ValueError(
+            "Invalid value for calendar_base_color in configuration file.")
 
     for value in calendar_base_color:
         if not isinstance(value, int) or value < 0 or value > 255:
-            raise ValueError("Invalid value for calendar_base_color in configuration file.")
+            raise ValueError(
+                "Invalid value for calendar_base_color in configuration file.")
 
     if not isinstance(calendar_background_enabled, bool):
         raise ValueError(
@@ -92,10 +98,12 @@ def validate_config():
             "Invalid value for default_font in configuration file.")
 
     if not isinstance(today_big_shadow_offset, int):
-        raise ValueError("Invalid value for today_big_shadow_offset in configuration file.")
+        raise ValueError(
+            "Invalid value for today_big_shadow_offset in configuration file.")
 
     if not isinstance(space_between_calendars, int):
-        raise ValueError("Invalid value for space_between_calendars in configuration file.")
+        raise ValueError(
+            "Invalid value for space_between_calendars in configuration file.")
 
     if not isinstance(base_font_size, int) or base_font_size <= 8:
         raise ValueError("Invalid value for font_size in configuration file.")
@@ -133,11 +141,13 @@ def validate_config():
             "Invalid value for today_big_shadow in configuration file.")
 
     if not isinstance(today_big_shadow_color, tuple) or len(today_big_shadow_color) != 3:
-        raise ValueError("Invalid value for today_big_shadow_color in configuration file.")
+        raise ValueError(
+            "Invalid value for today_big_shadow_color in configuration file.")
 
     for value in today_big_shadow_color:
         if not isinstance(value, int) or value < 0 or value > 255:
-            raise ValueError("Invalid value for today_big_shadow_color in configuration file.")
+            raise ValueError(
+                "Invalid value for today_big_shadow_color in configuration file.")
 
     if not isinstance(online_random_wallpaper, bool):
         raise ValueError(
