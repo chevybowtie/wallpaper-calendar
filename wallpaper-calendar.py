@@ -1,17 +1,18 @@
+import argparse
+import calendar
 import ctypes
 import datetime as dt
-from os import getcwd, listdir, path
 import platform
-from random import choice
-import calendar
+import re
 import subprocess
+from os import getcwd, listdir, path
+from random import choice
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
-import argparse
 if platform.system() == 'Windows':
     import win32com.client
-
+from num2words import num2words
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
 SPI_SETDESKWALLPAPER = 20
@@ -21,13 +22,15 @@ SPIF_UPDATEINIFILE = 0x1
 SPIF_SENDWININICHANGE = 0x2
 
 # these should move to config.py
-HIGHLIGHT_COLOR = settings.today_highlight_color        # Today's date font color for highlighting
-CALENDAR_COLOR = settings.calendar_base_color           # Color for the calendar font
+# Today's date font color for highlighting
+HIGHLIGHT_COLOR = settings.today_highlight_color
+# Color for the calendar font
+CALENDAR_COLOR = settings.calendar_base_color
 
 # date helpers
 TODAYDATE = dt.date.today()
-STARTOFTODAY = dt.datetime.combine(TODAYDATE, dt.time.min)
-STARTOFTOMORROW = STARTOFTODAY + dt.timedelta(days=1)
+CALSTARTDATE = dt.datetime.combine(TODAYDATE, dt.time.min)
+CALENDDATE = CALSTARTDATE + dt.timedelta(days=1)
 
 CALENDARDATE = dt.date.today()
 
@@ -35,8 +38,10 @@ CALENDARDATE = dt.date.today()
 parser = argparse.ArgumentParser()
 
 # Add the arguments that you want to override
-parser.add_argument('--date', type=str, help='provide date to generate calendar month')
-parser.add_argument('--outlook', type=bool, help='when set to true, populate using Outlook integration')
+parser.add_argument('--date', type=str,
+                    help='provide date to generate calendar month')
+parser.add_argument('--outlook', type=bool,
+                    help='when set to true, populate using Outlook integration')
 # Parse the command-line arguments
 args = parser.parse_args()
 # Override the values in config.py with the command-line arguments
@@ -50,7 +55,6 @@ if CUSTOMCALENDAR:
 
 if args.outlook:
     settings.write_todays_appts = True
-
 
 
 def execute_set(command):
@@ -150,15 +154,18 @@ def create_wallpaper():
             this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
             mask_draw = ImageDraw.Draw(this_month_mask)
             mask_draw.text((calx, caly), calendar_text,
-                        fill=HIGHLIGHT_COLOR, font=font)
+                           fill=HIGHLIGHT_COLOR, font=font)
             image = Image.alpha_composite(image, this_month_mask)
 
         # draw it again in white but skipping today
         # finds the first occurrence of today's date and remove it from this output
         if not CUSTOMCALENDAR:
-            todays_date = " " if TODAYDATE.day < 10 else "  "
-            calendar_text = calendar_text.replace(
-                str(TODAYDATE.day), todays_date, 1)
+            # how many characters are we replacing
+            replacement = " " * len(str(TODAYDATE.day))
+            # remove today's day
+            calendar_text = re.sub(rf"\b{TODAYDATE.day}\b", replacement, calendar_text)
+            
+
         this_month_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(this_month_mask)
         mask_draw.text((calx, caly), calendar_text,
@@ -208,19 +215,38 @@ def create_wallpaper():
     # if enabled, show today's appointments from Outlook on Windows
     if settings.write_todays_appts and platform.system() == 'Windows':
         appts = get_outlook_appointments(
-            STARTOFTODAY, STARTOFTOMORROW)
+            CALSTARTDATE, CALENDDATE)
         outputRow = 0
         appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(appointment_mask)
+        row_day = appts[0].StartInStartTimeZone.day
+        prev_day = appts[0].StartInStartTimeZone.day
+        day_row = 0
 
         for appointment in appts:
-            start_time = appointment.Start.strftime("%H:%M")
-            mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
-                outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
-            mask_draw.text((settings.position_for_appts[0]+200, settings.position_for_appts[1]+(
-                outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
+            row_day = appts[0].StartInStartTimeZone.day
+            day_row += 1
+
+            if row_day == prev_day:
+                start_time = appointment.Start.strftime("%H:%M")
+                if day_row == 1:
+                    mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+                        outputRow*60)), appointment.Start.strftime("%a"), CALENDAR_COLOR, font=apptFont)
+                if day_row == 2:
+                    mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+                        outputRow*60)), num2words(row_day, to='orndianl_num'), CALENDAR_COLOR, font=apptFont)
+                mask_draw.text((settings.position_for_appts[0] + 170, settings.position_for_appts[1]+(
+                    outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
+                mask_draw.text((settings.position_for_appts[0] + 370, settings.position_for_appts[1]+(
+                    outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
+            else:
+                mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+                    outputRow*60)), " ", font=apptFont)
+                prev_day = row_day
+                day_row = 0
+
             outputRow += 1
-        image = Image.alpha_composite(image, appointment_mask)
+        # image = Image.alpha_composite(image, appointment_mask)
 
     # if enabled, show today's data (large) if this is not a custom calendar
     if settings.write_today_big and not CUSTOMCALENDAR:
@@ -326,7 +352,11 @@ def get_outlook_appointments(begin, end):
 
     # show what we found in Outlook
     for appointment in calendar:
+        print("Day of month: ", appointment.StartInStartTimeZone.day)
         print("Subject: ", appointment.Subject)
+        print("Is recurring: ", appointment.IsRecurring)
+        print("Is conflicted: ", appointment.IsConflict)
+        print("Is reminder set: ", appointment.ReminderSet)
         print("Start: ", appointment.Start)
         print("---------")
 
