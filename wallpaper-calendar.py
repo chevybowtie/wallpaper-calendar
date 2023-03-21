@@ -10,15 +10,13 @@ from random import choice
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
-from num2words import num2words
 
 if platform.system() == 'Windows':
     import win32com.client
 else:
     import helpers.kdesetwallpaper2 as helper
 
-
-
+from num2words import num2words
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
 SPI_SETDESKWALLPAPER = 20
@@ -36,7 +34,7 @@ CALENDAR_COLOR = settings.calendar_base_color
 # date helpers
 TODAYDATE = dt.date.today()
 CALSTARTDATE = dt.datetime.combine(TODAYDATE, dt.time.min)
-CALENDDATE = CALSTARTDATE + dt.timedelta(days=1)
+CALENDDATE = CALSTARTDATE + dt.timedelta(days=settings.range_in_days)
 
 CALENDARDATE = dt.date.today()
 
@@ -225,29 +223,47 @@ def create_wallpaper():
     if settings.write_todays_appts and platform.system() == 'Windows':
         appts = get_outlook_appointments(
             CALSTARTDATE, CALENDDATE)
+        
+        # row of appointment text
         outputRow = 0
+
         appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(appointment_mask)
+        
+        # day of month
         row_day = appts[0].StartInStartTimeZone.day
         prev_day = appts[0].StartInStartTimeZone.day
+        
+        # row we are on for a given day
         day_row = 0
 
         for appointment in appts:
+
             row_day = appts[0].StartInStartTimeZone.day
             day_row += 1
 
             if row_day == prev_day:
+
                 start_time = appointment.Start.strftime("%H:%M")
+
+                # day of the week
                 if day_row == 1:
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                         outputRow*60)), appointment.Start.strftime("%a"), CALENDAR_COLOR, font=apptFont)
+                
+                # ordinal date
                 if day_row == 2:
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                         outputRow*60)), num2words(row_day, to='orndianl_num'), CALENDAR_COLOR, font=apptFont)
+                
+                # appointment start time
                 mask_draw.text((settings.position_for_appts[0] + 170, settings.position_for_appts[1]+(
                     outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
+                
+                # appointment subject
                 mask_draw.text((settings.position_for_appts[0] + 370, settings.position_for_appts[1]+(
                     outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
+                
             else:
                 mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                     outputRow*60)), " ", font=apptFont)
@@ -255,7 +271,7 @@ def create_wallpaper():
                 day_row = 0
 
             outputRow += 1
-        # image = Image.alpha_composite(image, appointment_mask)
+        image = Image.alpha_composite(image, appointment_mask)
 
     # if enabled, show today's data (large) if this is not a custom calendar
     if settings.write_today_big and not CUSTOMCALENDAR:
@@ -363,9 +379,9 @@ def get_outlook_appointments(begin, end):
     for appointment in calendar:
         print("Day of month: ", appointment.StartInStartTimeZone.day)
         print("Subject: ", appointment.Subject)
-        print("Is recurring: ", appointment.IsRecurring)
-        print("Is conflicted: ", appointment.IsConflict)
-        print("Is reminder set: ", appointment.ReminderSet)
+        # print("Is recurring: ", appointment.IsRecurring)
+        # print("Is conflicted: ", appointment.IsConflict)
+        # print("Is reminder set: ", appointment.ReminderSet)
         print("Start: ", appointment.Start)
         print("---------")
 
