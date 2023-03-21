@@ -6,7 +6,8 @@ online_random_wallpaper = True
 offline_random_wallpaper = False
 # this fallback default is used if neither random option is enabled
 default_wallpaper = 'default.jpg'
-image_resolution = (1920, 1080)
+#image_resolution = (1920, 1080)
+image_resolution = (2560, 1440)
 
 # text (appts = 2x, today_big = 4x)
 base_font_size = 24

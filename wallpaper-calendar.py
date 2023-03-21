@@ -12,7 +12,9 @@ from PIL import Image, ImageDraw, ImageFont
 import config as settings
 if platform.system() == 'Windows':
     import win32com.client
-from num2words import num2words
+from num2words import num2wordselse:
+import helpers.kdesetwallpaper2 as helper
+
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
 SPI_SETDESKWALLPAPER = 20
@@ -96,8 +98,11 @@ def set_wallpaper(wallpaper_name='\output.jpg'):
         # else:
         #     print('Wallpaper set successfully')
     elif platform.system() == 'Linux':
-        execute_set(
-            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
+        helper.setwallpaper(wallpaper_path, plugin='org.kde.image')
+        # execute_set(
+        #     f"{cwd}/helpers/kdesetwallpaper {wallpaper_path}")
+#        execute_set(
+#            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
     else:
         input('Your operating system is not supported')
 
