@@ -10,10 +10,14 @@ from random import choice
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
+from num2words import num2words
+
 if platform.system() == 'Windows':
     import win32com.client
-from num2words import num2wordselse:
-import helpers.kdesetwallpaper2 as helper
+else:
+    import helpers.kdesetwallpaper2 as helper
+
+
 
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
