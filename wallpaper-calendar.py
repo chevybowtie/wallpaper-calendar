@@ -138,6 +138,9 @@ def create_wallpaper():
         gtoday = str(TODAYDATE)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
 
+        # set Sunday as 1st day of week
+        calendar.setfirstweekday(calendar.SUNDAY)
+
         calendar_text = (calendar.month(TODAYDATE.year, TODAYDATE.month))
         calx = image.width-w-settings.position_for_calendar[0]
         caly = image.height-h-settings.position_for_calendar[1]
