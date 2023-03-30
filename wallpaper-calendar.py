@@ -10,10 +10,10 @@ from random import choice
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
+from calendar_providers.outlook import get_outlook_appointments
+from start_of_next_month import start_of_next_month
 
-if platform.system() == 'Windows':
-    import win32com.client
-else:
+if platform.system() == 'Linux':
     import helpers.kdesetwallpaper2 as helper
 
 from num2words import num2words
@@ -304,24 +304,6 @@ def create_wallpaper():
     image.save("output.jpg", 'JPEG', quality=90)
 
 
-def start_of_next_month(date):
-    """
-    Returns a `datetime.date` object representing the first day of the next month after the specified date.
-
-    Args:
-        current_date (datetime.date): The date to use as a reference for calculating the next month.
-
-    Returns:
-        datetime.date: A `datetime.date` object representing the first day of the next month.
-    """
-    year = date.year + (date.month // 12)
-    month = date.month % 12 + 1
-    next_month = dt.date(year, month, 1)
-
-    # Return the start of the next month
-    return next_month
-
-
 def get_wallpaper():
     """
     Returns the filename of the wallpaper image to use, based on the specified configuration options.
@@ -347,76 +329,6 @@ def get_wallpaper():
         return 'wallpapers/default.jpg'
 
 
-def get_outlook_appointments(begin, end):
-    """
-    Queries Outlook for appointment items between the specified begin and end dates.
-
-    Args:
-        begin (datetime.datetime): The start time of the interval to query, as a `datetime.datetime` object.
-        end (datetime.datetime): The end time of the interval to query, as a `datetime.datetime` object.
-
-    Returns:
-        str: A string containing a formatted list of appointment items.
-    """
-
-    # get a handle on Outlook
-    outlook = win32com.client.Dispatch(
-        'Outlook.Application').GetNamespace('MAPI')
-
-    # 9 = list of all the meetings, 6 = emails
-    calendar = outlook.getDefaultFolder(9).Items
-
-    # events that repeat
-    calendar.IncludeRecurrences = True
-
-    # sort
-    calendar.Sort("[Start]")
-
-    # setup a constraint
-    calendar.Sort('[Start]')
-    restriction = "[Start] >= '" + begin.strftime(
-        '%m/%d/%Y') + "' AND [END] <= '" + end.strftime('%m/%d/%Y') + "'"
-    calendar = calendar.Restrict(restriction)
-
-    # show what we found in Outlook
-    for appointment in calendar:
-        print("Day of month: ", appointment.StartInStartTimeZone.day)
-        print("Subject: ", appointment.Subject)
-        # print("Is recurring: ", appointment.IsRecurring)
-        # print("Is conflicted: ", appointment.IsConflict)
-        # print("Is reminder set: ", appointment.ReminderSet)
-        print("Start: ", appointment.Start)
-        print("---------")
-
-    return calendar
-
-
-def groom_appointments(calendar):
-    """
-    Takes a list of Outlook appointment items and processes them into a dictionary format suitable for display.
-
-    Args:
-        calendar (list): A list of Outlook appointment items.
-
-    Returns:
-        None
-    """
-    appointmentDictionary = {}
-
-    for appointment in calendar:
-        meetingDate = str(appointment.Start)
-        subject = str(appointment.Subject)
-        duration = str(appointment.duration)
-        # date = parse(meetingDate).date()
-        # time = parse(meetingDate).time()
-        appointmentDictionary[subject] = {"Subject": [
-            subject], "Time": [meetingDate], "Durations": [duration]}
-
-    for subject in appointmentDictionary.keys():
-        rowDict = {}
-        rowDict["Subject"] = appointmentDictionary[subject]["Subject"] if appointmentDictionary[subject]["Subject"] else ""
-
-
 def start():
     try:
         settings.validate_config()
@@ -430,3 +342,4 @@ def start():
 
 if __name__ == '__main__':
     start()
+
