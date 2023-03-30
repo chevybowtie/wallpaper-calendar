@@ -1,7 +1,7 @@
 import win32com.client
 
 
-def get_outlook_appointments(begin, end):
+def get_appointments(begin, end):
     """
     Queries Outlook for appointment items between the specified begin and end dates.
     Args:

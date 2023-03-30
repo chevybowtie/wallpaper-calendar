@@ -10,7 +10,7 @@ from random import choice
 import wget
 from PIL import Image, ImageDraw, ImageFont
 import config as settings
-from calendar_providers.outlook import get_outlook_appointments
+from calendar_providers.outlook import get_appointments
 from start_of_next_month import start_of_next_month
 
 if platform.system() == 'Linux':
@@ -224,7 +224,7 @@ def create_wallpaper():
 
     # if enabled, show today's appointments from Outlook on Windows
     if settings.write_todays_appts and platform.system() == 'Windows':
-        appts = get_outlook_appointments(
+        appts = get_appointments(
             CALSTARTDATE, CALENDDATE)
         
         # row of appointment text
