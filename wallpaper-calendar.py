@@ -5,6 +5,9 @@ import datetime as dt
 import platform
 import re
 import subprocess
+import os
+import warnings
+
 from os import getcwd, listdir, path
 from random import choice
 import wget
@@ -12,9 +15,14 @@ from PIL import Image, ImageDraw, ImageFont
 import config as settings
 if platform.system() == 'Windows':
     import win32com.client
-from num2words import num2wordselse:
-import helpers.kdesetwallpaper2 as helper
+    import winreg
+else:
+    import helpers.kdesetwallpaper2 as helper
 
+from num2words import num2words
+
+warnings.filterwarnings("ignore", "(Possibly )?corrupt EXIF data", UserWarning, "^PIL\\.Image$")
+warnings.filterwarnings("ignore", category=UserWarning, module="PIL.Image", message="Invalid resolution")
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
 SPI_SETDESKWALLPAPER = 20
@@ -32,7 +40,7 @@ CALENDAR_COLOR = settings.calendar_base_color
 # date helpers
 TODAYDATE = dt.date.today()
 CALSTARTDATE = dt.datetime.combine(TODAYDATE, dt.time.min)
-CALENDDATE = CALSTARTDATE + dt.timedelta(days=1)
+CALENDDATE = CALSTARTDATE + dt.timedelta(days=settings.range_in_days)
 
 CALENDARDATE = dt.date.today()
 
@@ -44,6 +52,12 @@ parser.add_argument('--date', type=str,
                     help='provide date to generate calendar month')
 parser.add_argument('--outlook', type=bool,
                     help='when set to true, populate using Outlook integration')
+parser.add_argument('--days', type=int, 
+                    help='the number of days of appointments to show on the wallpaper')
+
+
+
+
 # Parse the command-line arguments
 args = parser.parse_args()
 # Override the values in config.py with the command-line arguments
@@ -58,6 +72,8 @@ if CUSTOMCALENDAR:
 if args.outlook:
     settings.write_todays_appts = True
 
+if args.days:
+    CALENDDATE = CALSTARTDATE + dt.timedelta(days=args.days)
 
 def execute_set(command):
     """
@@ -75,7 +91,7 @@ def execute_set(command):
         print(f"Error executing command: {e}")
 
 
-def set_wallpaper(wallpaper_name='\output.jpg'):
+def set_wallpaper(wallpaper_name='output.jpg'):
     """
     Sets the desktop wallpaper to the specified image file.
 
@@ -95,14 +111,32 @@ def set_wallpaper(wallpaper_name='\output.jpg'):
             SPI_SETDESKWALLPAPER, 0, wallpaper_path, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE)
         if not success:
             print('Failed to set wallpaper')
-        # else:
-        #     print('Wallpaper set successfully')
+        else:
+            # Create a dictionary to map wallpaper styles to their registry values
+            wallpaper_style_map = {
+                'center': '0',
+                'tile': '1',
+                'stretch': '2',
+                'fit': '4',
+                'fill': '5',
+                'span': '6'
+            }
+
+            # Set wallpaper style based on config.py setting
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Control Panel\\Desktop", 0, winreg.KEY_SET_VALUE)
+            wallpaper_style_value = wallpaper_style_map.get(settings.wallpaper_style.lower(), '4')  # fit(4) is the default
+            winreg.SetValueEx(key, "WallpaperStyle", 0, winreg.REG_SZ, wallpaper_style_value)
+            winreg.SetValueEx(key, "TileWallpaper", 0, winreg.REG_SZ, "0" if settings.wallpaper_style.lower() != 'tile' else "1")
+            winreg.CloseKey(key)
+
     elif platform.system() == 'Linux':
-        helper.setwallpaper(wallpaper_path, plugin='org.kde.image')
-        # execute_set(
-        #     f"{cwd}/helpers/kdesetwallpaper {wallpaper_path}")
-#        execute_set(
-#            f"/usr/bin/gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
+        # Set wallpaper to center for KDE
+        helper.setwallpaper(wallpaper_path, plugin='org.kde.image', mode='center')
+        
+        # Set wallpaper to center for GNOME
+        os.system(f"gsettings set org.gnome.desktop.background picture-options 'center'")
+        os.system(f"gsettings set org.gnome.desktop.background picture-uri {wallpaper_path}")
+
     else:
         input('Your operating system is not supported')
 
@@ -135,6 +169,9 @@ def create_wallpaper():
 
         gtoday = str(TODAYDATE)
         w, h, *z = draw.textbbox((0, 0), gtoday, font)
+
+        #set Sunday as 1st day of the week
+        calendar.setfirstweekday(calendar.SUNDAY)
 
         calendar_text = (calendar.month(TODAYDATE.year, TODAYDATE.month))
         calx = image.width-w-settings.position_for_calendar[0]
@@ -221,52 +258,88 @@ def create_wallpaper():
     if settings.write_todays_appts and platform.system() == 'Windows':
         appts = get_outlook_appointments(
             CALSTARTDATE, CALENDDATE)
+        
+        # row of appointment text
         outputRow = 0
+
         appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(appointment_mask)
-        row_day = appts[0].StartInStartTimeZone.day
-        prev_day = appts[0].StartInStartTimeZone.day
-        day_row = 0
+
+        # day of month
+        appointment_day = appts[0].StartInStartTimeZone.day
+        section_day = appts[0].StartInStartTimeZone.day
+
+        # rows for a give date
+        section_day_row = 0
 
         for appointment in appts:
-            row_day = appts[0].StartInStartTimeZone.day
-            day_row += 1
+            section_day_row += 1
+            appointment_day = appointment.StartInStartTimeZone.day
+            appointment_category = appointment.Categories
 
-            if row_day == prev_day:
+            if appointment_day == section_day:
+                # appt start time
                 start_time = appointment.Start.strftime("%H:%M")
-                if day_row == 1:
+
+                # day of the week
+                if section_day_row == 1:
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                         outputRow*60)), appointment.Start.strftime("%a"), CALENDAR_COLOR, font=apptFont)
-                if day_row == 2:
+
+                # ordinal date
+                if section_day_row == 2:
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
-                        outputRow*60)), num2words(row_day, to='orndianl_num'), CALENDAR_COLOR, font=apptFont)
+                        outputRow*60)), num2words(appointment_day, to='ordinal_num'), CALENDAR_COLOR, font=apptFont)
+                    
+                # Check if the appointment has a category and use the corresponding color
+                if appointment_category and appointment_category in settings.appointment_colors:
+                    text_color = settings.appointment_colors[appointment_category]
+                else:
+                    text_color = CALENDAR_COLOR
+
+                # appt start time
+                
+                # shadow
+                mask_draw.text((settings.position_for_appts[0] + 170 + settings.text_shadow_offset, settings.position_for_appts[1] + settings.text_shadow_offset + (
+                    outputRow*60)) , start_time, settings.text_shadow_color, font=apptFont)
+                # text
                 mask_draw.text((settings.position_for_appts[0] + 170, settings.position_for_appts[1]+(
-                    outputRow*60)), start_time, CALENDAR_COLOR, font=apptFont)
+                    outputRow*60)), start_time, text_color, font=apptFont)
+
+
+
+                # print(appointment_category)
+
+                # appt subject
+                mask_draw.text((settings.position_for_appts[0] + 370 + settings.text_shadow_offset, settings.position_for_appts[1] + settings.text_shadow_offset +(
+                    outputRow*60)), appointment.Subject, settings.text_shadow_color, font=apptFont)
+
                 mask_draw.text((settings.position_for_appts[0] + 370, settings.position_for_appts[1]+(
-                    outputRow*60)), appointment.Subject, CALENDAR_COLOR, font=apptFont)
+                    outputRow*60)), appointment.Subject, text_color, font=apptFont)
+                
             else:
                 mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
                     outputRow*60)), " ", font=apptFont)
-                prev_day = row_day
-                day_row = 0
+                section_day = appointment_day
+                section_day_row = 0
 
             outputRow += 1
-        # image = Image.alpha_composite(image, appointment_mask)
+        image = Image.alpha_composite(image, appointment_mask)
 
     # if enabled, show today's data (large) if this is not a custom calendar
     if settings.write_today_big and not CUSTOMCALENDAR:
         today_big_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(today_big_mask)
         if settings.today_big_shadow:
-            mask_draw.text((settings.position_for_today_big[0] + settings.today_big_shadow_offset, settings.position_for_today_big[1] + 100 + settings.today_big_shadow_offset), str(dt.datetime.today().day),
-                           settings.today_big_shadow_color, font=heroFont)
+            mask_draw.text((settings.position_for_today_big[0] + settings.text_shadow_offset, settings.position_for_today_big[1] + 100 + settings.text_shadow_offset), str(dt.datetime.today().day),
+                           settings.text_shadow_color, font=heroFont)
 
         mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+100), str(dt.datetime.today().day),
                        CALENDAR_COLOR, font=heroFont)
 
         if settings.today_big_shadow:
-            mask_draw.text((settings.position_for_today_big[0] + settings.today_big_shadow_offset, settings.position_for_today_big[1] + settings.today_big_shadow_offset), calendar.day_name[dt.datetime.today().weekday()],
-                           settings.today_big_shadow_color, font=heroFont)
+            mask_draw.text((settings.position_for_today_big[0] + settings.text_shadow_offset, settings.position_for_today_big[1] + settings.text_shadow_offset), calendar.day_name[dt.datetime.today().weekday()],
+                           settings.text_shadow_color, font=heroFont)
 
         mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]), calendar.day_name[dt.datetime.today().weekday()],
                        CALENDAR_COLOR, font=heroFont)
@@ -311,8 +384,15 @@ def get_wallpaper():
     """
     try:
         if settings.online_random_wallpaper:
-            image_filename = wget.download(
-                'https://picsum.photos/{}/{}'.format(settings.image_resolution[0], settings.image_resolution[1]), out='wallpapers')
+
+            if settings.online_wallpaper_source == 'picsum':
+                image_filename = wget.download(
+                    'https://picsum.photos/{}/{}'.format(settings.image_resolution[0], settings.image_resolution[1]), out='wallpapers')
+
+            if settings.online_wallpaper_source == 'unsplash':
+                image_filename = wget.download(
+                    'https://source.unsplash.com/random/{}x{}'.format(settings.image_resolution[0], settings.image_resolution[1]), out='wallpapers')
+
             return image_filename
         elif settings.offline_random_wallpaper:
             image_filename = choice(
@@ -320,7 +400,11 @@ def get_wallpaper():
             return 'wallpapers\\'+image_filename
         else:
             return 'wallpapers/' + settings.default_wallpaper
-    except:
+    except Exception as e:
+        print("\n")
+        print(">> Using default wallpaper due to image retrieval failure <<\n")
+        print(f">> Error details: {e}")
+        print("\n")
         return 'wallpapers/default.jpg'
 
 
@@ -335,37 +419,25 @@ def get_outlook_appointments(begin, end):
     Returns:
         str: A string containing a formatted list of appointment items.
     """
-
-    # get a handle on Outlook
     outlook = win32com.client.Dispatch(
         'Outlook.Application').GetNamespace('MAPI')
 
-    # 9 = list of all the meetings, 6 = emails
     calendar = outlook.getDefaultFolder(9).Items
-
-    # events that repeat
     calendar.IncludeRecurrences = True
-
-    # sort
     calendar.Sort("[Start]")
 
-    # setup a constraint
     calendar.Sort('[Start]')
     restriction = "[Start] >= '" + begin.strftime(
         '%m/%d/%Y') + "' AND [END] <= '" + end.strftime('%m/%d/%Y') + "'"
     calendar = calendar.Restrict(restriction)
 
-    # show what we found in Outlook
+    # Filter out skipped appointment subjects
+    filtered_calendar = []
     for appointment in calendar:
-        print("Day of month: ", appointment.StartInStartTimeZone.day)
-        print("Subject: ", appointment.Subject)
-        print("Is recurring: ", appointment.IsRecurring)
-        print("Is conflicted: ", appointment.IsConflict)
-        print("Is reminder set: ", appointment.ReminderSet)
-        print("Start: ", appointment.Start)
-        print("---------")
+        if appointment.Subject.lower() not in [subject.lower() for subject in settings.skipped_appointment_subjects]:
+            filtered_calendar.append(appointment)
 
-    return calendar
+    return filtered_calendar
 
 
 def groom_appointments(calendar):

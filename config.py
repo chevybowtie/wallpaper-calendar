@@ -1,13 +1,35 @@
 # Wallpaper source
+online_random_wallpaper = False
+online_wallpaper_source = 'unsplash' # should be a one of the keys in online_wallpaper_resources
+# not yet used
+online_wallpaper_resources = {
+    "picsum" : "https://picsum.photos/{}/{}",
+    "unsplash" : "https://source.unsplash.com/random/{}x{}"
+}
 
-# pull from https://picsum.photos
-online_random_wallpaper = True
 # use one already downloaded (for offline use)
-offline_random_wallpaper = False
+offline_random_wallpaper = True
 # this fallback default is used if neither random option is enabled
-default_wallpaper = 'default.jpg'
-#image_resolution = (1920, 1080)
-image_resolution = (2560, 1440)
+default_wallpaper = 'default-3440x1440.jpg'
+image_resolution = (1920, 1080)
+# image_resolution = (3440, 1440)
+
+# if your outlook appointments have categories, you may alter the colors
+appointment_colors = {
+    "Boss": (255, 0, 0),            # Red
+    # "lunch": (160, 160, 160),       # dimmed (gray)
+    "important": (255,0,0),         # red
+    # "reminder": (0, 255, 0),        # Green
+    "reminder":(128,64,0),          # brown
+    # Add more categories and colors as needed
+
+}
+
+# List of appointment subjects to be skipped
+skipped_appointment_subjects = ["lunch"]
+
+# Wallpaper style: 'center', 'tile', 'stretch', 'fit', 'fill', 'span'
+wallpaper_style = 'fit'
 
 # text (appts = 2x, today_big = 4x)
 base_font_size = 24
@@ -21,8 +43,10 @@ calendar_background_corner_radius = 8
 # Hero title of day of week, and today's date
 write_today_big = True
 today_big_shadow = True
-today_big_shadow_color = (204, 204, 204)
-today_big_shadow_offset = 3
+
+# text_shadow_color = (204, 204, 204) # gray
+text_shadow_color = (45, 45, 45) # dark gray
+text_shadow_offset = 2
 
 # Gregorian calendar embed
 write_gregorian_calendar_for_this_month = True
@@ -30,16 +54,16 @@ write_gregorian_calendar_for_next_month = True
 position_for_calendar = (350, 600)
 position_for_today_big = (200, 25)
 space_between_calendars = 60
-# Today's date font color for highlighting
-today_highlight_color = (0, 255, 0)
-calendar_base_color = (255, 255, 255)    # Color for the calendar font
 
+# Today's date font color for highlighting
+today_highlight_color = (187,51,255)
+calendar_base_color = (255, 255, 255)    # Color for the calendar font
 
 # appointments embed
 # calendar_access = 'Outlook client'
-write_todays_appts = False
+write_todays_appts = True
 position_for_appts = (200, 300)
-range_in_days = 6
+range_in_days = 4
 
 
 def validate_config():
@@ -52,7 +76,7 @@ def validate_config():
     Returns:
         None
     """
-    valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160)]
+    valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160), (3440, 1440)]
     valid_fonts = ["Kingthings Trypewriter 2.ttf", "simply-mono.book.ttf", "software-tester-7.regular.ttf",
                    "unispace.bold.otf", "code-new-roman.regular.otf"]  # add more here...
 
@@ -98,9 +122,9 @@ def validate_config():
         raise ValueError(
             "Invalid value for default_font in configuration file.")
 
-    if not isinstance(today_big_shadow_offset, int):
+    if not isinstance(text_shadow_offset, int):
         raise ValueError(
-            "Invalid value for today_big_shadow_offset in configuration file.")
+            "Invalid value for text_shadow_offset in configuration file.")
 
     if not isinstance(space_between_calendars, int):
         raise ValueError(
@@ -141,14 +165,14 @@ def validate_config():
         raise ValueError(
             "Invalid value for today_big_shadow in configuration file.")
 
-    if not isinstance(today_big_shadow_color, tuple) or len(today_big_shadow_color) != 3:
+    if not isinstance(text_shadow_color, tuple) or len(text_shadow_color) != 3:
         raise ValueError(
-            "Invalid value for today_big_shadow_color in configuration file.")
+            "Invalid value for text_shadow_color in configuration file.")
 
-    for value in today_big_shadow_color:
+    for value in text_shadow_color:
         if not isinstance(value, int) or value < 0 or value > 255:
             raise ValueError(
-                "Invalid value for today_big_shadow_color in configuration file.")
+                "Invalid value for text_shadow_color in configuration file.")
 
     if not isinstance(online_random_wallpaper, bool):
         raise ValueError(
@@ -161,3 +185,21 @@ def validate_config():
     if not isinstance(default_wallpaper, str):
         raise ValueError(
             "Invalid value for default_wallpaper in configuration file.")
+    
+    if not isinstance(online_wallpaper_source, str) or online_wallpaper_source not in online_wallpaper_resources:
+        raise ValueError("Invalid value for online_wallpaper_source in configuration file.")
+        
+    if not isinstance(online_wallpaper_resources, dict):
+        raise ValueError("Invalid value for online_wallpaper_resources in configuration file.")
+        
+    if not isinstance(appointment_colors, dict):
+        raise ValueError("Invalid value for appointment_colors in configuration file.")
+        
+    for category, color in appointment_colors.items():
+        if not isinstance(category, str):
+            raise ValueError("Invalid category value in appointment_colors in configuration file.")
+        if not isinstance(color, tuple) or len(color) != 3:
+            raise ValueError("Invalid color value in appointment_colors in configuration file.")
+        for value in color:
+            if not isinstance(value, int) or value < 0 or value > 255:
+                raise ValueError("Invalid color component in appointment_colors in configuration file.")

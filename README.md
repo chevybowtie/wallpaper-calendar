@@ -35,4 +35,4 @@ $ pip install pywin32
 ```
 Then, using the config value `write_todays_appts = True`, you can run the wallpaper-calendar.py script to generate and set your wallpaper calendar with Outlook's appointments
 
-This will generate a calendar, while also embedding today's schedule based on Outlook's calendar. Note that this feature is still experimental and may not work on all systems or with all versions of Outlook. Currently it works on my Office 365 installation.
+This will generate a calendar, while also embedding today's schedule based on Outlook's calendar. Note that this feature is still experimental and may not work on all systems or with all versions of Outlook. Currently it works on my Office 365 installation on Windows 11. This feature branch is not tested on Linux since it is concentrating on Outlook on Windows.

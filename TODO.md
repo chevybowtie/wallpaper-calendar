@@ -6,3 +6,4 @@
 * [ ] configure for 2 monitors 
   * [ ] calendar on one
   * [ ] appointments on another
+* [x] configure for wallpaper style (tile, fit, center, etc.)
