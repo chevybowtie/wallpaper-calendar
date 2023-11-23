@@ -20,6 +20,7 @@ else:
     import helpers.kdesetwallpaper2 as helper
 
 from num2words import num2words
+from start_of_next_month import start_of_next_month
 
 warnings.filterwarnings("ignore", "(Possibly )?corrupt EXIF data", UserWarning, "^PIL\\.Image$")
 warnings.filterwarnings("ignore", category=UserWarning, module="PIL.Image", message="Invalid resolution")
@@ -325,6 +326,7 @@ def create_wallpaper():
 
             outputRow += 1
         image = Image.alpha_composite(image, appointment_mask)
+        image = Image.alpha_composite(image, appointment_mask)
 
     # if enabled, show today's data (large) if this is not a custom calendar
     if settings.write_today_big and not CUSTOMCALENDAR:
@@ -352,24 +354,6 @@ def create_wallpaper():
     # output to disk
     image = image.convert('RGB')
     image.save("output.jpg", 'JPEG', quality=90)
-
-
-def start_of_next_month(date):
-    """
-    Returns a `datetime.date` object representing the first day of the next month after the specified date.
-
-    Args:
-        current_date (datetime.date): The date to use as a reference for calculating the next month.
-
-    Returns:
-        datetime.date: A `datetime.date` object representing the first day of the next month.
-    """
-    year = date.year + (date.month // 12)
-    month = date.month % 12 + 1
-    next_month = dt.date(year, month, 1)
-
-    # Return the start of the next month
-    return next_month
 
 
 def get_wallpaper():
@@ -479,3 +463,4 @@ def start():
 
 if __name__ == '__main__':
     start()
+
