@@ -1,6 +1,6 @@
 # Wallpaper source
-online_random_wallpaper = False
-online_wallpaper_source = 'unsplash' # should be a one of the keys in online_wallpaper_resources
+online_random_wallpaper = True
+online_wallpaper_source = 'picsum' # should be a one of the keys in online_wallpaper_resources
 # not yet used
 online_wallpaper_resources = {
     "picsum" : "https://picsum.photos/{}/{}",
@@ -8,32 +8,35 @@ online_wallpaper_resources = {
 }
 
 # use one already downloaded (for offline use)
-offline_random_wallpaper = True
+offline_random_wallpaper = False
 # this fallback default is used if neither random option is enabled
-default_wallpaper = 'default-3440x1440.jpg'
+# default_wallpaper = 'default-3440x1440.jpg'
+default_wallpaper = '1920x1080.jpg'
 image_resolution = (1920, 1080)
 # image_resolution = (3440, 1440)
+# image_resolution = (1280, 1024) 
 
 # if your outlook appointments have categories, you may alter the colors
 appointment_colors = {
     "Boss": (255, 0, 0),            # Red
     # "lunch": (160, 160, 160),       # dimmed (gray)
-    "important": (255,0,0),         # red
+    "Important": (255,0,0),         # red
     # "reminder": (0, 255, 0),        # Green
     "reminder":(128,64,0),          # brown
     # Add more categories and colors as needed
-
+    "Personal":(128,128,0),           # olive
 }
 
 # List of appointment subjects to be skipped
-skipped_appointment_subjects = ["lunch"]
+skipped_appointment_subjects = ["lunch","No Meeting Friday Afternoon"]
 
 # Wallpaper style: 'center', 'tile', 'stretch', 'fit', 'fill', 'span'
 wallpaper_style = 'fit'
 
 # text (appts = 2x, today_big = 4x)
-base_font_size = 24
+base_font_size = 16
 default_font = 'unispace.bold.otf'
+
 
 # calendar background
 calendar_background_enabled = True
@@ -43,6 +46,8 @@ calendar_background_corner_radius = 8
 # Hero title of day of week, and today's date
 write_today_big = True
 today_big_shadow = True
+position_for_today_big = (150, 65)
+today_row_spacing = 80
 
 # text_shadow_color = (204, 204, 204) # gray
 text_shadow_color = (45, 45, 45) # dark gray
@@ -51,20 +56,17 @@ text_shadow_offset = 2
 # Gregorian calendar embed
 write_gregorian_calendar_for_this_month = True
 write_gregorian_calendar_for_next_month = True
-position_for_calendar = (350, 600)
-position_for_today_big = (200, 25)
-space_between_calendars = 60
-
-# Today's date font color for highlighting
+position_for_calendar = (250, 600)
+space_between_calendars = 40
 today_highlight_color = (187,51,255)
 calendar_base_color = (255, 255, 255)    # Color for the calendar font
 
 # appointments embed
 # calendar_access = 'Outlook client'
 write_todays_appts = True
-position_for_appts = (200, 300)
-range_in_days = 4
-
+position_for_appts = (150, 300)
+range_in_days = 6
+appointment_row_spacing = 40
 
 def validate_config():
     """
@@ -76,7 +78,7 @@ def validate_config():
     Returns:
         None
     """
-    valid_resolutions = [(1366, 768), (1920, 1080), (2560, 1440), (3840, 2160), (3440, 1440)]
+    valid_resolutions = [(1280, 1024), (1366, 768), (1920, 1080), (2560, 1440), (3840, 2160), (3440, 1440)]
     valid_fonts = ["Kingthings Trypewriter 2.ttf", "simply-mono.book.ttf", "software-tester-7.regular.ttf",
                    "unispace.bold.otf", "code-new-roman.regular.otf"]  # add more here...
 
