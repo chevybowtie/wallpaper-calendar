@@ -7,6 +7,8 @@ import re
 import subprocess
 import os
 import warnings
+import time
+import pywintypes
 
 from os import getcwd, listdir, path
 from random import choice
@@ -20,10 +22,14 @@ else:
     import helpers.kdesetwallpaper2 as helper
 
 from num2words import num2words
-from start_of_next_month import start_of_next_month
 
 warnings.filterwarnings("ignore", "(Possibly )?corrupt EXIF data", UserWarning, "^PIL\\.Image$")
 warnings.filterwarnings("ignore", category=UserWarning, module="PIL.Image", message="Invalid resolution")
+
+# ANSI escape sequences for coloring text
+GREEN = "\033[32m"
+RED = "\033[31m"
+RESET = "\033[0m"
 
 # This constant represents the uiAction parameter for setting the desktop wallpaper using the SystemParametersInfoW() function.
 SPI_SETDESKWALLPAPER = 20
@@ -106,6 +112,11 @@ def set_wallpaper(wallpaper_name='output.jpg'):
     cwd = getcwd()
     wallpaper_path = path.join(cwd, wallpaper_name)
 
+    # Check if the file exists
+    if not os.path.exists(wallpaper_path):
+        print(f"File {wallpaper_path} does not exist.")
+        return
+    
     if platform.system() == 'Windows':
         print("setting wallpaper")
         success = ctypes.windll.user32.SystemParametersInfoW(
@@ -123,12 +134,16 @@ def set_wallpaper(wallpaper_name='output.jpg'):
                 'span': '6'
             }
 
-            # Set wallpaper style based on config.py setting
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Control Panel\\Desktop", 0, winreg.KEY_SET_VALUE)
-            wallpaper_style_value = wallpaper_style_map.get(settings.wallpaper_style.lower(), '4')  # fit(4) is the default
-            winreg.SetValueEx(key, "WallpaperStyle", 0, winreg.REG_SZ, wallpaper_style_value)
-            winreg.SetValueEx(key, "TileWallpaper", 0, winreg.REG_SZ, "0" if settings.wallpaper_style.lower() != 'tile' else "1")
-            winreg.CloseKey(key)
+            for i in range(2):
+                # Set wallpaper style based on config.py setting
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Control Panel\\Desktop", 0, winreg.KEY_SET_VALUE)
+                wallpaper_style_value = wallpaper_style_map.get(settings.wallpaper_style.lower(), '4')  # fit(4) is the default
+                winreg.SetValueEx(key, "WallpaperStyle", 0, winreg.REG_SZ, wallpaper_style_value)
+                winreg.SetValueEx(key, "TileWallpaper", 0, winreg.REG_SZ, "0" if settings.wallpaper_style.lower() != 'tile' else "1")
+                winreg.CloseKey(key)
+
+                if i != 1:  # No need to sleep after the last operation
+                    time.sleep(5)  # Delay for 5 seconds
 
     elif platform.system() == 'Linux':
         # Set wallpaper to center for KDE
@@ -140,6 +155,27 @@ def set_wallpaper(wallpaper_name='output.jpg'):
 
     else:
         input('Your operating system is not supported')
+
+def load_fonts():
+    """
+    Loads and returns the fonts used in the image.
+
+    Args:
+        None
+
+    Returns:
+        font: The base font.
+        heroFont: The hero font.
+        apptFont: The appointment font.
+    """
+    # Load font
+    fontFile = 'fonts/{}'.format(settings.default_font)
+    font = ImageFont.truetype(fontFile, settings.base_font_size)
+    heroFont = ImageFont.truetype(fontFile, settings.base_font_size * 4)
+    apptFont = ImageFont.truetype(fontFile, settings.base_font_size * 2)
+
+    return font, heroFont, apptFont
+
 
 
 def create_wallpaper():
@@ -153,10 +189,9 @@ def create_wallpaper():
         None
     """
     # Load font
-    fontFile = 'fonts/{}'.format(settings.default_font)
-    font = ImageFont.truetype(fontFile, settings.base_font_size)
-    heroFont = ImageFont.truetype(fontFile, settings.base_font_size * 4)
-    apptFont = ImageFont.truetype(fontFile, settings.base_font_size * 2)
+    font, heroFont, apptFont = load_fonts()
+    appointment_row_spacing = settings.appointment_row_spacing # 60
+    today_row_spacing = settings.today_row_spacing #100
 
     # Load Image
     wallpaper_name = get_wallpaper()
@@ -257,40 +292,73 @@ def create_wallpaper():
 
     # if enabled, show today's appointments from Outlook on Windows
     if settings.write_todays_appts and platform.system() == 'Windows':
-        appts = get_outlook_appointments(
-            CALSTARTDATE, CALENDDATE)
+        try:
+            
+            appts = get_outlook_appointments(CALSTARTDATE, CALENDDATE)
         
-        # row of appointment text
-        outputRow = 0
+            # row of appointment text
+            outputRow = 0
 
-        appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
-        mask_draw = ImageDraw.Draw(appointment_mask)
+            appointment_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            mask_draw = ImageDraw.Draw(appointment_mask)
 
-        # day of month
-        appointment_day = appts[0].StartInStartTimeZone.day
-        section_day = appts[0].StartInStartTimeZone.day
+            # day of month
+            try:
+                appointment_day = appts[0].StartInStartTimeZone.day
+            except pywintypes.com_error as e:
+                print(f"Error processing appointment: {e}")
 
-        # rows for a give date
-        section_day_row = 0
+            section_day = appts[0].StartInStartTimeZone.day
 
-        for appointment in appts:
-            section_day_row += 1
-            appointment_day = appointment.StartInStartTimeZone.day
-            appointment_category = appointment.Categories
+            # rows for a give date
+            section_day_row = 0
 
-            if appointment_day == section_day:
-                # appt start time
-                start_time = appointment.Start.strftime("%H:%M")
+            for appointment in appts:
+                section_day_row += 1
+                appointment_day = appointment.StartInStartTimeZone.day
+                appointment_category = appointment.Categories
+
+
+                if appointment_day != section_day:
+                    mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
+                    outputRow*appointment_row_spacing)), " ", font=apptFont)
+                    section_day_row = 1
+                    section_day = appointment_day
+                    outputRow += 1
+
+                print(f"{RED} loop {RESET} {appointment_day}:{section_day}:{section_day_row} - {appointment_category} - {appointment.Subject}") 
+
+                # if appointment_day == section_day:
+
+                if appointment.AllDayEvent:
+                    start_time = f"All day"
+                else:
+                    # appt start time
+                    start_time = appointment.Start.strftime("%H:%M")
 
                 # day of the week
                 if section_day_row == 1:
+
+                    if appointment.AllDayEvent:
+                        start_time = f"All day"
+                        bg_color = (0, 0, 255) # blue is the default
+
+                        # if this appt category has a color defined, use it instead
+                        if appointment_category and appointment_category in settings.appointment_colors:
+                            bg_color = settings.appointment_colors[appointment_category]
+                        
+                        # draw a colored box for day-of-week for all-day events
+                        mask_draw.rectangle((settings.position_for_appts[0] - 10, settings.position_for_appts[1] + (outputRow * appointment_row_spacing),
+                                            settings.position_for_appts[0] + 68, settings.position_for_appts[1] + (outputRow * appointment_row_spacing) + 40),
+                                            fill=bg_color)
+                        
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
-                        outputRow*60)), appointment.Start.strftime("%a"), CALENDAR_COLOR, font=apptFont)
+                        outputRow*appointment_row_spacing)), appointment.Start.strftime("%a"), CALENDAR_COLOR, font=apptFont)
 
                 # ordinal date
                 if section_day_row == 2:
                     mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
-                        outputRow*60)), num2words(appointment_day, to='ordinal_num'), CALENDAR_COLOR, font=apptFont)
+                        outputRow*appointment_row_spacing)), num2words(appointment_day, to='ordinal_num'), CALENDAR_COLOR, font=apptFont)
                     
                 # Check if the appointment has a category and use the corresponding color
                 if appointment_category and appointment_category in settings.appointment_colors:
@@ -299,44 +367,38 @@ def create_wallpaper():
                     text_color = CALENDAR_COLOR
 
                 # appt start time
-                
                 # shadow
                 mask_draw.text((settings.position_for_appts[0] + 170 + settings.text_shadow_offset, settings.position_for_appts[1] + settings.text_shadow_offset + (
-                    outputRow*60)) , start_time, settings.text_shadow_color, font=apptFont)
+                    outputRow*appointment_row_spacing)) , start_time, settings.text_shadow_color, font=apptFont)
                 # text
                 mask_draw.text((settings.position_for_appts[0] + 170, settings.position_for_appts[1]+(
-                    outputRow*60)), start_time, text_color, font=apptFont)
+                    outputRow*appointment_row_spacing)), start_time, text_color, font=apptFont)
 
 
 
-                # print(appointment_category)
 
                 # appt subject
                 mask_draw.text((settings.position_for_appts[0] + 370 + settings.text_shadow_offset, settings.position_for_appts[1] + settings.text_shadow_offset +(
-                    outputRow*60)), appointment.Subject, settings.text_shadow_color, font=apptFont)
+                    outputRow*appointment_row_spacing)), appointment.Subject, settings.text_shadow_color, font=apptFont)
 
                 mask_draw.text((settings.position_for_appts[0] + 370, settings.position_for_appts[1]+(
-                    outputRow*60)), appointment.Subject, text_color, font=apptFont)
-                
-            else:
-                mask_draw.text((settings.position_for_appts[0], settings.position_for_appts[1]+(
-                    outputRow*60)), " ", font=apptFont)
-                section_day = appointment_day
-                section_day_row = 0
+                    outputRow*appointment_row_spacing)), appointment.Subject, text_color, font=apptFont)
 
-            outputRow += 1
-        image = Image.alpha_composite(image, appointment_mask)
-        image = Image.alpha_composite(image, appointment_mask)
+                outputRow += 1
+            image = Image.alpha_composite(image, appointment_mask)
+        except Exception as e:
+            print(f"Failed to retrieve or process Outlook appointments: {e}")
+            # Handle or log the general error
 
     # if enabled, show today's data (large) if this is not a custom calendar
     if settings.write_today_big and not CUSTOMCALENDAR:
         today_big_mask = Image.new("RGBA", image.size, (0, 0, 0, 0))
         mask_draw = ImageDraw.Draw(today_big_mask)
         if settings.today_big_shadow:
-            mask_draw.text((settings.position_for_today_big[0] + settings.text_shadow_offset, settings.position_for_today_big[1] + 100 + settings.text_shadow_offset), str(dt.datetime.today().day),
+            mask_draw.text((settings.position_for_today_big[0] + settings.text_shadow_offset, settings.position_for_today_big[1] + today_row_spacing + settings.text_shadow_offset), str(dt.datetime.today().day),
                            settings.text_shadow_color, font=heroFont)
 
-        mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+100), str(dt.datetime.today().day),
+        mask_draw.text((settings.position_for_today_big[0], settings.position_for_today_big[1]+today_row_spacing), str(dt.datetime.today().day),
                        CALENDAR_COLOR, font=heroFont)
 
         if settings.today_big_shadow:
@@ -354,6 +416,24 @@ def create_wallpaper():
     # output to disk
     image = image.convert('RGB')
     image.save("output.jpg", 'JPEG', quality=90)
+
+
+def start_of_next_month(date):
+    """
+    Returns a `datetime.date` object representing the first day of the next month after the specified date.
+
+    Args:
+        current_date (datetime.date): The date to use as a reference for calculating the next month.
+
+    Returns:
+        datetime.date: A `datetime.date` object representing the first day of the next month.
+    """
+    year = date.year + (date.month // 12)
+    month = date.month % 12 + 1
+    next_month = dt.date(year, month, 1)
+
+    # Return the start of the next month
+    return next_month
 
 
 def get_wallpaper():
@@ -403,54 +483,53 @@ def get_outlook_appointments(begin, end):
     Returns:
         str: A string containing a formatted list of appointment items.
     """
-    outlook = win32com.client.Dispatch(
-        'Outlook.Application').GetNamespace('MAPI')
 
-    calendar = outlook.getDefaultFolder(9).Items
-    calendar.IncludeRecurrences = True
-    calendar.Sort("[Start]")
+    try:
+        outlook = win32com.client.Dispatch('Outlook.Application').GetNamespace('MAPI')
+        calendar = outlook.getDefaultFolder(9).Items
+        calendar.IncludeRecurrences = True
+        calendar.Sort("[Start]")
+        restriction = "[Start] >= '" + begin.strftime('%m/%d/%Y') + "' AND [END] <= '" + end.strftime('%m/%d/%Y') + "'"
+        calendar = calendar.Restrict(restriction)
 
-    calendar.Sort('[Start]')
-    restriction = "[Start] >= '" + begin.strftime(
-        '%m/%d/%Y') + "' AND [END] <= '" + end.strftime('%m/%d/%Y') + "'"
-    calendar = calendar.Restrict(restriction)
+        # Filter out skipped appointment subjects
+        filtered_calendar = []
+        print(f"skipping subjects: {settings.skipped_appointment_subjects}")
 
-    # Filter out skipped appointment subjects
-    filtered_calendar = []
-    for appointment in calendar:
-        if appointment.Subject.lower() not in [subject.lower() for subject in settings.skipped_appointment_subjects]:
-            filtered_calendar.append(appointment)
+        for appointment in calendar:
+            if appointment.Subject.lower().strip() not in [subject.lower() for subject in settings.skipped_appointment_subjects]:
+                
+                # Truncate appt.subject at the last space before 50 characters
+                subject = str(appointment.Subject)
+                if len(subject) > 50:
+                    truncated_subject = subject[:47].rsplit(' ', 1)[0] + '...'
+                else:
+                    truncated_subject = subject
+                appointment.Subject = truncated_subject
+        
+                filtered_calendar.append(appointment)
+                print(f"{GREEN} + using:{RESET} {appointment.Start}: {appointment.Subject}")
+            else:
+                print(f"{RED} - skipped:{RESET} {appointment.Start}: {appointment.Subject}") 
+        return filtered_calendar
+    
+    except pywintypes.com_error as e:
+            print("An error occurred while accessing Outlook appointments:", e)
+            return []  # Returning an empty list as a fallback
 
-    return filtered_calendar
 
-
-def groom_appointments(calendar):
+def start():
     """
-    Takes a list of Outlook appointment items and processes them into a dictionary format suitable for display.
+    Starts the wallpaper calendar application.
 
-    Args:
-        calendar (list): A list of Outlook appointment items.
+    This function validates the configuration file, creates a wallpaper, and sets it as the desktop wallpaper.
+
+    Raises:
+        ValueError: If the configuration file is invalid.
 
     Returns:
         None
     """
-    appointmentDictionary = {}
-
-    for appointment in calendar:
-        meetingDate = str(appointment.Start)
-        subject = str(appointment.Subject)
-        duration = str(appointment.duration)
-        # date = parse(meetingDate).date()
-        # time = parse(meetingDate).time()
-        appointmentDictionary[subject] = {"Subject": [
-            subject], "Time": [meetingDate], "Durations": [duration]}
-
-    for subject in appointmentDictionary.keys():
-        rowDict = {}
-        rowDict["Subject"] = appointmentDictionary[subject]["Subject"] if appointmentDictionary[subject]["Subject"] else ""
-
-
-def start():
     try:
         settings.validate_config()
     except ValueError as e:
@@ -463,4 +542,3 @@ def start():
 
 if __name__ == '__main__':
     start()
-
